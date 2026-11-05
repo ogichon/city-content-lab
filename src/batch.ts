@@ -109,6 +109,16 @@ async function capture(recipe: Recipe, row: HTMLLIElement) {
     if (performance.now() >= deadline) throw new Error('timeout');
     if (viewer().__idle !== true || Number(measured.stabilityMeanDiff) >= 2.0) throw new Error('unstable');
     if (Number(measured.backgroundFraction) >= 0.85) throw new Error('blank');
+    // Third-sample confirmation: __idle is not cleared by every possible
+    // loading resumption, so re-sample after a longer gap. Late tile/LOD
+    // streaming that changes the frame marks the recipe unstable instead
+    // of letting a still-loading frame into the results.
+    await delay(2500);
+    if (viewer().__idle !== true) throw new Error('unstable');
+    const third = await rendered(sample, deadline);
+    const confirm = compareSamples(second.pixels, third);
+    if (Number(confirm.stabilityMeanDiff) >= 2.0) throw new Error('unstable');
+    measured.confirmMeanDiff = confirm.stabilityMeanDiff;
     const blob = pngBlob(second.dataUrl);
     entries.push({ ...recipe, group: recipe.group ?? null, material: recipe.material ?? null, growthOrder: recipe.growthOrder ?? null, result: 'success', cameraText: viewer().document.querySelector('#cam')?.textContent ?? '', statusText: viewer().__status ?? '', ...measured, capturedAt: new Date().toISOString(), canvas: { w: second.w, h: second.h } });
     images.push({ name: `${recipe.id}.png`, blob });
