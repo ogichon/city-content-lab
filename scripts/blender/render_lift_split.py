@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--object', dest='object_name')
     parser.add_argument('--region', type=float, nargs=4, required=True,
                         metavar=('XMIN', 'XMAX', 'YMIN', 'YMAX'))
-    parser.add_argument('--height', type=float, required=True)
+    parser.add_argument('--height', type=float, default=50.0)  # unused with --debug
     parser.add_argument('--output', required=True)
     parser.add_argument('--samples', type=int, default=32)
     parser.add_argument('--cam', type=float, nargs=3)
