@@ -117,8 +117,8 @@ async function capture(recipe: Recipe, row: HTMLLIElement) {
     if (viewer().__idle !== true) throw new Error('unstable');
     const third = await rendered(sample, deadline);
     const confirm = compareSamples(second.pixels, third);
-    if (Number(confirm.stabilityMeanDiff) >= 2.0) throw new Error('unstable');
     measured.confirmMeanDiff = confirm.stabilityMeanDiff;
+    if (viewer().__idle !== true || Number(confirm.stabilityMeanDiff) >= 2.0) throw new Error('unstable');
     const blob = pngBlob(second.dataUrl);
     entries.push({ ...recipe, group: recipe.group ?? null, material: recipe.material ?? null, growthOrder: recipe.growthOrder ?? null, result: 'success', cameraText: viewer().document.querySelector('#cam')?.textContent ?? '', statusText: viewer().__status ?? '', ...measured, capturedAt: new Date().toISOString(), canvas: { w: second.w, h: second.h } });
     images.push({ name: `${recipe.id}.png`, blob });

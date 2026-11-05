@@ -54,4 +54,4 @@ vm.runInContext(stripTypeScriptTypes(pure) + '\nglobalThis.pure = { compareSampl
 // PR #11 review fix: resumed-loading defenses
 assert.match(batch, /confirmMeanDiff/, 'third-sample confirmation recorded');
 assert.match(batch, /delay\(2500\)/, 'confirmation sample uses a longer gap');
-assert.match(viewer, /__idle = false/, 'viewer clears __idle when loading resumes');
+assert.match(read('src/viewer.ts'), /__idle = false/, 'viewer clears __idle when loading resumes');
