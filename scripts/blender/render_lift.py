@@ -38,9 +38,14 @@ porcelain = make_mat("CCL_lift_porcelain", (0.92, 0.89, 0.83), 0.0, 0.35)
 concrete = make_mat("CCL_lift_concrete", (0.42, 0.38, 0.34), 0.0, 0.9)
 pit_mat = make_mat("CCL_lift_pit", (0.015, 0.018, 0.028), 0.0, 1.0)
 
+VOID = "--void" in argv  # hide everything outside the region (EXP-001 lesson)
 lifted = 0
 for obj in bpy.data.objects:
-    if obj.type != "MESH" or "ground" in obj.name.lower():
+    if obj.type != "MESH":
+        continue
+    if "ground" in obj.name.lower():
+        if VOID:
+            obj.hide_render = True
         continue
     bb = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
     cen = sum(bb, Vector()) / 8
@@ -49,7 +54,9 @@ for obj in bpy.data.objects:
     if XMIN <= cen.x <= XMAX and YMIN <= cen.y <= YMAX:
         obj.location.z += HEIGHT
         lifted += 1
-print(f"CCL: lifted meshes = {lifted} by {HEIGHT}m", flush=True)
+    elif VOID:
+        obj.hide_render = True
+print(f"CCL: lifted meshes = {lifted} by {HEIGHT}m (void={VOID})", flush=True)
 
 cx, cy = (XMIN + XMAX) / 2, (YMIN + YMAX) / 2
 sx, sy = XMAX - XMIN, YMAX - YMIN
@@ -65,8 +72,22 @@ def add_box(name, loc, scale, mat):
 
 # Slab under the lifted district: top at building base + HEIGHT - small inset
 add_box("CCL_slab", (cx, cy, HEIGHT - SLAB / 2), (sx / 2, sy / 2, SLAB / 2), concrete)
-# Pit plate in the hole (dark, at ground level) + a shallow pit box for edges
-add_box("CCL_pit", (cx, cy, 0.4), (sx / 2, sy / 2, 0.4), pit_mat)
+# Pit plate in the hole (dark, at ground level) — meaningless in void mode.
+if not VOID:
+    add_box("CCL_pit", (cx, cy, 0.4), (sx / 2, sy / 2, 0.4), pit_mat)
+else:
+    # Shadow catcher at z=0: the slab's soft shadow below is what makes the
+    # float height readable when the surroundings are gone.
+    bpy.ops.mesh.primitive_plane_add(location=(cx, cy, 0))
+    catcher = bpy.context.active_object
+    catcher.name = "CCL_shadow_catcher"
+    catcher.scale = (sx * 1.6, sy * 1.6, 1)
+    try:
+        catcher.is_shadow_catcher = True
+    except Exception as e:
+        print(f"CCL: shadow catcher unavailable ({e})", flush=True)
+    scene0 = bpy.context.scene
+    scene0.render.film_transparent = False
 
 scene = bpy.context.scene
 if "--cam" in argv and "--target" in argv:
