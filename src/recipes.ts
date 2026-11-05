@@ -105,6 +105,8 @@ export interface Recipe {
   place: keyof typeof PLACES;
   time: keyof typeof TIMES;
   mode: Mode;
+  group?: "controlled" | "best";
+  cameraOverride?: Partial<PlaceDef["camera"]>;
   material?: keyof typeof MATERIALS;
   growthOrder?: GrowthOrder;
   seed: number;
@@ -113,26 +115,42 @@ export interface Recipe {
 
 export const CODE_VERSION = "0.1.0";
 
-// EXP-003: same place, same camera, same time (sunset; crystal uses night
-// because bloom needs darkness — this deviation is recorded, not hidden).
+// EXP-003: Controlled isolates material at sunset; Best Look explores lighting.
+// Both sets share the Tokyo base camera.
 export const RECIPES: Recipe[] = [
-  { id: "exp003-porcelain", experiment: "EXP-003", title: "MATERIAL TOKYO / 陶器", place: "tokyo", time: "sunset", mode: "material", material: "porcelain", seed: 1, codeVersion: CODE_VERSION },
-  { id: "exp003-gold", experiment: "EXP-003", title: "MATERIAL TOKYO / 黄金", place: "tokyo", time: "sunset", mode: "material", material: "gold", seed: 1, codeVersion: CODE_VERSION },
-  { id: "exp003-chrome", experiment: "EXP-003", title: "MATERIAL TOKYO / クローム", place: "tokyo", time: "day", mode: "material", material: "chrome", seed: 1, codeVersion: CODE_VERSION },
-  { id: "exp003-ice", experiment: "EXP-003", title: "MATERIAL TOKYO / 氷", place: "tokyo", time: "sunset", mode: "material", material: "ice", seed: 1, codeVersion: CODE_VERSION },
-  { id: "exp003-glass", experiment: "EXP-003", title: "MATERIAL TOKYO / ガラス", place: "tokyo", time: "sunset", mode: "material", material: "glass", seed: 1, codeVersion: CODE_VERSION },
-  { id: "exp003-crystal", experiment: "EXP-003", title: "MATERIAL TOKYO / 発光クリスタル", place: "tokyo", time: "night", mode: "material", material: "crystal", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-porcelain", experiment: "EXP-003", title: "MATERIAL TOKYO / 陶器", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "porcelain", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-gold", experiment: "EXP-003", title: "MATERIAL TOKYO / 黄金", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "gold", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-chrome", experiment: "EXP-003", title: "MATERIAL TOKYO / クローム", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "chrome", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-ice", experiment: "EXP-003", title: "MATERIAL TOKYO / 氷", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "ice", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-glass", experiment: "EXP-003", title: "MATERIAL TOKYO / ガラス", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "glass", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-crystal", experiment: "EXP-003", title: "MATERIAL TOKYO / 発光クリスタル", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "crystal", seed: 1, codeVersion: CODE_VERSION },
+  // EXP-003: Best Look lighting by material.
+  { id: "exp003-best-porcelain", experiment: "EXP-003", title: "MATERIAL TOKYO [Best] / 陶器", place: "tokyo", time: "sunset", mode: "material", group: "best", material: "porcelain", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-best-gold", experiment: "EXP-003", title: "MATERIAL TOKYO [Best] / 黄金", place: "tokyo", time: "sunset", mode: "material", group: "best", material: "gold", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-best-chrome", experiment: "EXP-003", title: "MATERIAL TOKYO [Best] / クローム", place: "tokyo", time: "day", mode: "material", group: "best", material: "chrome", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-best-ice", experiment: "EXP-003", title: "MATERIAL TOKYO [Best] / 氷", place: "tokyo", time: "day", mode: "material", group: "best", material: "ice", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-best-glass", experiment: "EXP-003", title: "MATERIAL TOKYO [Best] / ガラス", place: "tokyo", time: "day", mode: "material", group: "best", material: "glass", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp003-best-crystal", experiment: "EXP-003", title: "MATERIAL TOKYO [Best] / 発光クリスタル", place: "tokyo", time: "night", mode: "material", group: "best", material: "crystal", seed: 1, codeVersion: CODE_VERSION },
   // EXP-002: growth orders. Duration is fixed in the viewer (12s) so orders compare fairly.
   { id: "exp002-center-out", experiment: "EXP-002", title: "CITY GROWTH / 中心→外側", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "center-out", seed: 42, codeVersion: CODE_VERSION },
   { id: "exp002-low-to-high", experiment: "EXP-002", title: "CITY GROWTH / 低→高", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "low-to-high", seed: 42, codeVersion: CODE_VERSION },
   { id: "exp002-random", experiment: "EXP-002", title: "CITY GROWTH / ランダム", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "random", seed: 42, codeVersion: CODE_VERSION },
-  { id: "exp002-giants-last", experiment: "EXP-002", title: "CITY GROWTH / 巨大ビル最後", place: "tocho", time: "sunset", mode: "growth", growthOrder: "giants-last", seed: 42, codeVersion: CODE_VERSION },
+  { id: "exp002-giants-last", experiment: "EXP-002", title: "CITY GROWTH / 巨大ビル最後", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "giants-last", seed: 42, codeVersion: CODE_VERSION },
+  // EXP-004: change only the camera with gold at sunset.
+  { id: "exp004-standard", experiment: "EXP-004", title: "CAMERA / 標準", place: "tokyo", time: "sunset", mode: "material", material: "gold", group: "controlled", seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp004-low-angle", experiment: "EXP-004", title: "CAMERA / ローアングル", place: "tokyo", time: "sunset", mode: "material", material: "gold", group: "controlled", cameraOverride: { distance: 380, pitch: -18 }, seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp004-top-down", experiment: "EXP-004", title: "CAMERA / 真俯瞰", place: "tokyo", time: "sunset", mode: "material", material: "gold", group: "controlled", cameraOverride: { distance: 700, pitch: -85 }, seed: 1, codeVersion: CODE_VERSION },
+  { id: "exp004-diorama", experiment: "EXP-004", title: "CAMERA / ジオラマ俯瞰", place: "tokyo", time: "sunset", mode: "material", material: "gold", group: "controlled", cameraOverride: { distance: 900, pitch: -55 }, seed: 1, codeVersion: CODE_VERSION },
   // EXP-001: LIFT-LITE. True geometric cutting is out of Navara's reach;
   // this isolates the building cluster in a dark void (no terrain/photo)
   // to test the floating-diorama composition. Recorded as LITE, not LIFT.
   { id: "exp001-lift-tokyo", experiment: "EXP-001", title: "CITY LIFT-LITE / 東京駅・浮遊ジオラマ", place: "tokyo", time: "night", mode: "lift", seed: 7, codeVersion: CODE_VERSION },
   { id: "exp001-lift-tocho", experiment: "EXP-001", title: "CITY LIFT-LITE / 都庁・浮遊ジオラマ", place: "tocho", time: "night", mode: "lift", seed: 7, codeVersion: CODE_VERSION },
 ];
+
+export function effectiveCamera(recipe: Recipe): PlaceDef["camera"] {
+  return { ...PLACES[recipe.place].camera, ...recipe.cameraOverride };
+}
 
 export function getRecipe(id: string | null): Recipe {
   return RECIPES.find((r) => r.id === id) ?? RECIPES[0];
