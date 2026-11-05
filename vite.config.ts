@@ -49,6 +49,7 @@ export default defineConfig({
         viewer: "viewer.html",
         compare: "compare.html",
         gallery: "gallery.html",
+        batch: "batch.html",
       },
     },
   },

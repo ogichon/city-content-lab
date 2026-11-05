@@ -115,6 +115,13 @@ async function main() {
       (window as any).__idle = true;
       status("読み込み完了（idle検知）");
     });
+    // Loading can resume after an idle (further tile streaming): readiness
+    // must reflect the CURRENT state, so clear __idle on any loading signal.
+    for (const ev of ["loading", "tile-loading", "rendering"]) {
+      try { (view as any).on(ev, () => { (window as any).__idle = false; }); } catch { /* event may not exist */ }
+    }
+    // NOTE: no status-text fallback here — report() legitimately overwrites
+    // the status after setup ("設定完了" etc.), which would wedge readiness.
   } catch (error) { console.warn("idle event unavailable", error); }
   view.setCamera(camera);
   const showCamera = () => {
