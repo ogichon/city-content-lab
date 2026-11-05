@@ -34,5 +34,14 @@
     "technique": "Blender 切断リフト（in-context）",
     "status": "candidate",
     "note": "タワーの足元の街区が剥がれて浮く。ピットと下面が見える。"
+  },
+  {
+    "id": "hero-skytree-gold",
+    "title": "金のスカイツリー",
+    "file": "hero-skytree-gold.jpg",
+    "experiment": "EXP-005",
+    "technique": "Blender ヒーロー素材（地=磁器、タワー=金）+地理院航空写真ベースマップ",
+    "status": "candidate",
+    "note": "ヒーロー素材の本命。淡色ベースマップで隅田川と街路が入り、実在感が増した。"
   }
 ]

@@ -72,6 +72,27 @@ def add_box(name, loc, scale, mat):
 
 # Slab under the lifted district: top at building base + HEIGHT - small inset
 add_box("CCL_slab", (cx, cy, HEIGHT - SLAB / 2), (sx / 2, sy / 2, SLAB / 2), concrete)
+# Optional basemap: a georeferenced photo plane at z=0.05 (below the pit
+# plate's top at 0.8, so the hole stays dark). Extent = the scene coords the
+# image covers. Skipped in void mode (no ground context by definition).
+BASEMAP = argval("--basemap", None)
+if BASEMAP and not VOID:
+    bi = argv.index("--basemap-extent")
+    BXMIN, BXMAX, BYMIN, BYMAX = (float(argv[bi + k]) for k in range(1, 5))
+    bpy.ops.mesh.primitive_plane_add(location=((BXMIN + BXMAX) / 2, (BYMIN + BYMAX) / 2, 0.05))
+    plane = bpy.context.active_object
+    plane.name = "CCL_basemap"
+    plane.scale = ((BXMAX - BXMIN) / 2, (BYMAX - BYMIN) / 2, 1)
+    bpy.ops.object.transform_apply(scale=True)
+    mm = bpy.data.materials.new(name="CCL_basemap_mat")
+    mm.use_nodes = True
+    tex = mm.node_tree.nodes.new("ShaderNodeTexImage")
+    tex.image = bpy.data.images.load(BASEMAP)
+    mm.node_tree.links.new(tex.outputs["Color"], mm.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
+    mm.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.95
+    plane.data.materials.append(mm)
+    print(f"CCL: basemap {BASEMAP} over x[{BXMIN},{BXMAX}] y[{BYMIN},{BYMAX}]", flush=True)
+
 # Pit plate in the hole (dark, at ground level) — meaningless in void mode.
 if not VOID:
     add_box("CCL_pit", (cx, cy, 0.4), (sx / 2, sy / 2, 0.4), pit_mat)
