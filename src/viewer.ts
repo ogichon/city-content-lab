@@ -114,6 +114,10 @@ async function main() {
     (view as any).on("idle", () => {
       (window as any).__idle = true;
       status("読み込み完了（idle検知）");
+      // Enable capture here as well: a mid-setup error can abort the tail of
+      // setup (where the button is normally enabled) while this handler,
+      // registered earlier, still runs — capture only needs view + canvas.
+      (document.getElementById("capture") as HTMLButtonElement).disabled = false;
     });
     // Loading can resume after an idle (further tile streaming): readiness
     // must reflect the CURRENT state, so clear __idle on any loading signal.

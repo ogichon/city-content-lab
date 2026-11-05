@@ -10,3 +10,6 @@ for (const marker of ['__idle = true', '__status = message', '__view = view', 'p
 assert.match(viewer, /window\.addEventListener\("pageshow",\s*\(\) => \{[^}]*progress = fixedProgress \?\? -1;/, 'pageshow restores fixed URL progress');
 assert.ok(read('compare.html').includes('./captures/index.json'));
 console.log('PASS: capture static contracts (no capture or rendering claims)');
+// Capture must also be enabled from the idle handler (mid-setup errors can
+// otherwise leave it disabled forever — observed in managed-browser check).
+assert.match(viewer, /on\("idle", \(\) => \{[\s\S]*?getElementById\("capture"\) as HTMLButtonElement\)\.disabled = false/);
