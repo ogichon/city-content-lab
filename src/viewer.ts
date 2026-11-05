@@ -2,7 +2,7 @@ import ThreeView, { Color } from "@navaramap/three";
 import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 import { getRecipe, RECIPES, PLACES, TIMES, MATERIALS, seededRank } from "./recipes";
 
-const status = (message: string) => { document.getElementById("status")!.textContent = message; };
+const status = (message: string) => { document.getElementById("status")!.textContent = message; (window as any).__status = message; };
 const finite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 const mix = (a: number, b: number, t: number) => {
@@ -19,7 +19,13 @@ async function main() {
   let orbitElapsed = 0;
   let lastTick = 0;
   const evaluators = new Map<bigint, any>();
-  const recipe = getRecipe(new URLSearchParams(location.search).get("recipe"));
+  const params = new URLSearchParams(location.search);
+  if (params.get("ui") === "0") document.getElementById("ui")!.style.display = "none";
+  const recipe = getRecipe(params.get("recipe"));
+  const rawProgress = params.get("progress");
+  const fixedProgress = recipe.mode === "growth" && rawProgress !== null && rawProgress.trim() !== "" && Number.isFinite(Number(rawProgress))
+    ? clamp(Number(rawProgress)) : undefined;
+  (window as any).__idle = false;
   const place = PLACES[recipe.place];
   const time = TIMES[recipe.time];
   const orbit = { ...place.camera };
@@ -40,6 +46,7 @@ async function main() {
   const view = new ThreeView<DefaultDescriptions>({ container, shadow: true, backgroundColor: new Color().setHex(0x06080e), atmosphere: { date: new Date(time.iso) } });
   const plugin = new DefaultPlugin(); view.addPlugin(plugin);
   status("WASM初期化中…"); await view.init();
+  (window as any).__view = view;
   const scene = plugin.addDefaultPhotorealScene();
   scene.sun.update({ sun: { castShadow: true } } as any);
   view.addLight({ ambient: { intensity: time.ambient, color: new Color().setHex(0x93a7cc) } } as any);
@@ -101,6 +108,13 @@ async function main() {
     try { layer.on("featureRemoved", ({ featureSetId }: any) => { evaluators.delete(featureSetId); }); }
     catch (error) { console.warn("featureRemoved unavailable", error); }
   }
+  if (fixedProgress !== undefined) { progress = fixedProgress; refresh(); }
+  try {
+    (view as any).on("idle", () => {
+      (window as any).__idle = true;
+      status("読み込み完了（idle検知）");
+    });
+  } catch (error) { console.warn("idle event unavailable", error); }
   view.setCamera(place.camera);
   const showCamera = () => {
     const camera = view.camera;
