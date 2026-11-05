@@ -125,6 +125,13 @@ if "--nadir" in argv:
     cam.location = (cen.x, cen.y, 1500)
     cam.rotation_euler = (0, 0, 0)
     print("CCL: nadir ortho camera", flush=True)
+elif "--cam" in argv and "--target" in argv:
+    ci, ti = argv.index("--cam"), argv.index("--target")
+    cam.location = Vector(tuple(float(argv[ci + k]) for k in range(1, 4)))
+    tgt = Vector(tuple(float(argv[ti + k]) for k in range(1, 4)))
+    cam.rotation_euler = (tgt - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    cam_data.lens = float(argval("--lens", "32"))
+    print(f"CCL: camera {tuple(round(v) for v in cam.location)} -> {tuple(round(v) for v in tgt)} lens {cam_data.lens}", flush=True)
 else:
     cam.location = (cen.x - 1500, cen.y - 1500, 950)
     direction = Vector((cen.x, cen.y, 10)) - cam.location
