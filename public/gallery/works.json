@@ -1,0 +1,38 @@
+[
+  {
+    "id": "hero-tokyo-station-gold",
+    "title": "金の東京駅",
+    "file": "hero-tokyo-station-gold.jpg",
+    "experiment": "EXP-003/005",
+    "technique": "Blender ヒーロー素材（地=磁器、駅舎=金）",
+    "status": "candidate",
+    "note": "素材比較から生まれた最有力作。白い街に金の駅舎が浮く。"
+  },
+  {
+    "id": "hero-tocho-gold",
+    "title": "金の都庁",
+    "file": "hero-tocho-gold.jpg",
+    "experiment": "EXP-005",
+    "technique": "Blender ヒーロー素材（地=磁器、都庁舎=金）",
+    "status": "candidate",
+    "note": "双塔のノッチが金で際立つ。シリーズ2作目。"
+  },
+  {
+    "id": "specimen-yaesu-block",
+    "title": "都市標本・八重洲",
+    "file": "specimen-yaesu-block.jpg",
+    "experiment": "EXP-006",
+    "technique": "Blender 切断+void 孤立",
+    "status": "candidate",
+    "note": "街区を台座ごと虚空へ。清潔なジオラマ標本。"
+  },
+  {
+    "id": "lift-skytree-context",
+    "title": "浮く街区・スカイツリーの足元",
+    "file": "lift-skytree-context.jpg",
+    "experiment": "EXP-006",
+    "technique": "Blender 切断リフト（in-context）",
+    "status": "candidate",
+    "note": "タワーの足元の街区が剥がれて浮く。ピットと下面が見える。"
+  }
+]
