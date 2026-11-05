@@ -1,6 +1,6 @@
 import ThreeView, { Color } from "@navaramap/three";
 import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
-import { getRecipe, RECIPES, PLACES, TIMES, MATERIALS, seededRank } from "./recipes";
+import { getRecipe, RECIPES, PLACES, TIMES, MATERIALS, seededRank, effectiveCamera } from "./recipes";
 
 const status = (message: string) => { document.getElementById("status")!.textContent = message; };
 const finite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
@@ -22,7 +22,8 @@ async function main() {
   const recipe = getRecipe(new URLSearchParams(location.search).get("recipe"));
   const place = PLACES[recipe.place];
   const time = TIMES[recipe.time];
-  const orbit = { ...place.camera };
+  const camera = effectiveCamera(recipe);
+  const orbit = { ...camera };
   const container = document.getElementById("app")!;
   const play = document.getElementById("play") as HTMLButtonElement;
   const reset = document.getElementById("reset") as HTMLButtonElement;
@@ -62,7 +63,7 @@ async function main() {
     const h = p["bldg:measuredHeight"], x = p._x, y = p._y;
     if (!finite(h) || !finite(x) || !finite(y)) return 0.5;
     switch (recipe.growthOrder) {
-      case "center-out": return clamp(Math.hypot((x - place.camera.lng) * 111320 * Math.cos(place.camera.lat * Math.PI / 180), (y - place.camera.lat) * 110540) / 1500);
+      case "center-out": return clamp(Math.hypot((x - camera.lng) * 111320 * Math.cos(camera.lat * Math.PI / 180), (y - camera.lat) * 110540) / 1500);
       case "low-to-high": return clamp(h / 240);
       case "random": return seededRank(recipe.seed, x, y);
       case "giants-last": return h >= 150 ? 0.92 + 0.08 * clamp((h - 150) / 90) : clamp(h / 240);
@@ -101,7 +102,7 @@ async function main() {
     try { layer.on("featureRemoved", ({ featureSetId }: any) => { evaluators.delete(featureSetId); }); }
     catch (error) { console.warn("featureRemoved unavailable", error); }
   }
-  view.setCamera(place.camera);
+  view.setCamera(camera);
   const showCamera = () => {
     const camera = view.camera;
     const p = camera.positionGeographic, o = camera.orientation;
@@ -121,7 +122,7 @@ async function main() {
       } else {
         const dt = now - lastTick; orbitElapsed += dt;
         orbit.heading = (orbit.heading + 0.02 * dt / (1000 / 60)) % 360;
-        orbit.distance = place.camera.distance * (1 + 0.025 * Math.sin(orbitElapsed / 6000));
+        orbit.distance = camera.distance * (1 + 0.025 * Math.sin(orbitElapsed / 6000));
         view.setCamera({ ...orbit });
       }
       lastTick = now; report();
@@ -130,8 +131,8 @@ async function main() {
   };
   play.addEventListener("click", () => { if (timer !== undefined) { stop(); report(); } else start(); });
   reset.addEventListener("click", () => {
-    stop(); progress = -1; orbitElapsed = 0; Object.assign(orbit, place.camera);
-    view.setCamera(place.camera); refresh(); showCamera(); report();
+    stop(); progress = -1; orbitElapsed = 0; Object.assign(orbit, camera);
+    view.setCamera(camera); refresh(); showCamera(); report();
   });
   container.addEventListener("pointerdown", () => { if (recipe.mode === "lift") { stop(); report(); } });
   document.getElementById("capture")!.addEventListener("click", () => {
@@ -152,8 +153,8 @@ async function main() {
   });
   window.addEventListener("pagehide", () => { stop(); if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
   window.addEventListener("pageshow", () => {
-    stop(); progress = -1; orbitElapsed = 0; Object.assign(orbit, place.camera);
-    view.setCamera(place.camera); refresh(); showCamera();
+    stop(); progress = -1; orbitElapsed = 0; Object.assign(orbit, camera);
+    view.setCamera(camera); refresh(); showCamera();
     if (cameraTimer !== undefined) clearInterval(cameraTimer);
     cameraTimer = setInterval(showCamera, 2000);
     status("復帰しました。アニメーションはリセット済み。再生できます（描画は未確認）。");
