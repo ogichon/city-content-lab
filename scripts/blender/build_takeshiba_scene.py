@@ -46,7 +46,13 @@ def make_mat(name, color, metallic, roughness, lift=0.16):
     return m
 
 porcelain = make_mat("CCL_tk_porcelain", (0.92, 0.89, 0.83, 1.0), 0.0, 0.35)
-gold = make_mat("CCL_tk_gold", (0.83, 0.55, 0.12, 1.0), 1.0, 0.30)
+# The LOD4 hero is a thin BIM shell: at metallic/lift defaults its interior
+# floor plates show through the facade openings ("xray"). --hero-style solid
+# trades metalness for a matte, opaque read.
+if argval("--hero-style", "xray") == "solid":
+    gold = make_mat("CCL_tk_gold", (0.83, 0.55, 0.12, 1.0), 0.9, 0.42, lift=0.06)
+else:
+    gold = make_mat("CCL_tk_gold", (0.83, 0.55, 0.12, 1.0), 1.0, 0.30, lift=0.22)
 ground_mat = make_mat("CCL_tk_ground", (0.72, 0.74, 0.75, 1.0), 0.0, 0.95, lift=0.0)
 
 hero = None
@@ -95,7 +101,13 @@ bg.inputs[1].default_value = 1.0
 
 sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
 bpy.context.scene.collection.objects.link(sun)
-sun.rotation_euler = (0.9, 0.2, -0.6)
+if "--sun" in argv:
+    si = argv.index("--sun")
+    sun.rotation_euler = tuple(float(argv[si + k]) * 3.14159265 / 180.0 for k in range(1, 4))
+else:
+    sun.rotation_euler = (0.9, 0.2, -0.6)
+if "--exposure" in argv:
+    bpy.context.scene.view_settings.exposure = float(argval("--exposure", "0"))
 
 cam_data = bpy.data.cameras.new("Cam")
 cam = bpy.data.objects.new("Cam", cam_data)
