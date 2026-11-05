@@ -6,8 +6,8 @@ const root = path.resolve(__dirname, '..');
 const galleryDir = path.join(root, 'public/gallery');
 const works = JSON.parse(fs.readFileSync(path.join(galleryDir, 'works.json'), 'utf8'));
 assert.ok(Array.isArray(works), 'manifest is an array');
-assert.equal(works.length, 4, 'exactly four candidates');
-assert.equal(new Set(works.map(work => work.id)).size, 4, 'unique candidate IDs');
+assert.equal(works.length, 5, 'exactly five candidates');
+assert.equal(new Set(works.map(work => work.id)).size, 5, 'unique candidate IDs');
 for (const work of works) {
   for (const key of ['id', 'title', 'file', 'experiment', 'technique', 'status', 'note']) {
     assert.equal(typeof work[key], 'string', `${work.id}: ${key} is a string`);
@@ -29,4 +29,4 @@ assert.ok(html.includes("image.loading = 'lazy'"));
 assert.ok(html.includes('image.alt = work.title'));
 assert.ok(html.includes("badge.textContent = '候補'"));
 assert.ok(html.includes('候補作品を読み込めませんでした。'));
-console.log('PASS: gallery manifest, four candidate JPEGs, and page static contracts');
+console.log('PASS: gallery manifest, five candidate JPEGs, and page static contracts');
