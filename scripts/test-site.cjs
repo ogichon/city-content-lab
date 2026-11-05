@@ -19,12 +19,12 @@ for (const [index, html] of sources.entries()) {
 const script = sources[1].match(/<script type="module">([\s\S]*?)<\/script>/)[1];
 new vm.SourceTextModule(script); // Parse as a browser module, including top-level await.
 class Element {
-  constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; }
+  constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.style = {}; }
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
   scrollIntoView() { this.scrolled = true; }
 }
-async function render(ok) {
+async function render(ok, captures = null) {
   const container = new Element('div');
   const status = new Element('p');
   let fragment;
@@ -37,6 +37,10 @@ async function render(ok) {
     },
     location: {hash:'#EXP-003'},
     fetch: async url => {
+      if (url === './captures/index.json') {
+        if (captures === null) throw new Error('Missing capture manifest');
+        return {ok: true, json: async () => captures};
+      }
       assert.equal(url, './recipes/index.json');
       return {ok, status:503, json:async () => manifest};
     },
@@ -58,6 +62,13 @@ async function render(ok) {
   assert.ok(nodes.filter(n => n.className === 'thumbnail').every(n => n.textContent === '目視確認待ち — サムネイルはユーザーのChrome確認後に差し替え'));
   assert.ok(fragment.children.find(n => n.id === 'EXP-003').scrolled);
   assert.match(status.textContent, /12案/);
+  const captured = await render(true, [{id: manifest.recipes[0].id, file: `${manifest.recipes[0].id}.jpg`}]);
+  const images = walk(captured.fragment).filter(node => node.tag === 'img');
+  assert.equal(images.length, 1);
+  assert.equal(images[0].src, `./captures/${manifest.recipes[0].id}.jpg`);
+  assert.equal(images[0].alt, manifest.recipes[0].title);
+  const capturedLink = walk(captured.fragment).find(node => node.children.includes(images[0]));
+  assert.equal(capturedLink.href, `viewer.html?recipe=${manifest.recipes[0].id}`);
   const failure = await render(false);
   assert.match(failure.status.textContent, /読み込めませんでした/);
   console.log('PASS: three HTML pages, local links, attributions, module syntax, 12 recipe cards, expected viewer links, deep links, and fetch error state');
