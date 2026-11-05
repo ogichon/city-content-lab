@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CITY CONTENT LAB — Viewer</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#06080e;color:#eef2ff;font-family:system-ui,sans-serif}#app{position:fixed;inset:0}canvas{display:block}#ui{position:fixed;top:12px;left:12px;max-width:360px;max-height:calc(100dvh - 48px);overflow:auto;padding:12px;background:#0a0c14de;border:1px solid #ffffff26;border-radius:10px;backdrop-filter:blur(6px)}h1{font-size:14px;margin:0 0 8px}h2{font-size:16px;margin:8px 0}p,nav,summary{font-size:12px;line-height:1.6}a{color:#a8d7ff}nav a{display:block;padding:4px}a[aria-current]{background:#26476a}.row{display:flex;gap:8px;flex-wrap:wrap}button{color:inherit;background:#ffffff12;border:1px solid #ffffff44;border-radius:6px;padding:8px;cursor:pointer}button:disabled{opacity:.4;cursor:default}#status{color:#a8d7ff}#cam{font:11px monospace;color:#ffd28a;overflow-wrap:anywhere}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #ffd28a}
+</style>
+</head>
+<body>
+<div id="app" aria-label="3D都市ビュー"></div>
+<main id="ui">
+<h1>CITY CONTENT LAB / Navara × PLATEAU</h1>
+<h2 id="recipe-title">レシピ読み込み中…</h2>
+<p id="note"></p>
+<div class="row"><button id="play" disabled>⏵ 再生</button><button id="reset" disabled>↺ リセット</button><button id="capture" disabled>📸 キャプチャ</button></div>
+<p id="status" role="status">初期化中…</p><p id="cam"></p>
+<details><summary>レシピ切り替え</summary><nav id="recipes" aria-label="レシピ"></nav></details>
+<p>出典: <a href="https://www.mlit.go.jp/plateau/">国土交通省 Project PLATEAU（2023）</a><span id="ground-attribution"> / <a href="https://terrain.reearth.land/">Re:Earth Terrain</a> / <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル（全国最新写真）</a></span></p>
+</main>
+<script type="module" src="/src/viewer.ts"></script>
+</body>
+</html>
