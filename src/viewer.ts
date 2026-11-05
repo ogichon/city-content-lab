@@ -166,7 +166,7 @@ async function main() {
   });
   window.addEventListener("pagehide", () => { stop(); if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
   window.addEventListener("pageshow", () => {
-    stop(); progress = -1; orbitElapsed = 0; Object.assign(orbit, place.camera);
+    stop(); progress = fixedProgress ?? -1; orbitElapsed = 0; Object.assign(orbit, place.camera);
     view.setCamera(place.camera); refresh(); showCamera();
     if (cameraTimer !== undefined) clearInterval(cameraTimer);
     cameraTimer = setInterval(showCamera, 2000);
