@@ -10,3 +10,11 @@ for (const marker of ['__idle = true', '__status = message', '__view = view', 'p
 assert.match(viewer, /window\.addEventListener\("pageshow",\s*\(\) => \{[^}]*progress = fixedProgress \?\? -1;/, 'pageshow restores fixed URL progress');
 assert.ok(read('compare.html').includes('./captures/index.json'));
 console.log('PASS: capture static contracts (no capture or rendering claims)');
+// Capture must also be enabled from the idle handler (mid-setup errors can
+// otherwise leave it disabled forever — observed in managed-browser check).
+// Bounded check: the enabling must occur INSIDE the idle handler window,
+// not merely somewhere later in the file (review PR #13).
+const idleAt = viewer.indexOf('on("idle"');
+assert.ok(idleAt >= 0, 'idle handler exists');
+const idleWindow = viewer.slice(idleAt, idleAt + 600);
+assert.ok(idleWindow.includes('getElementById("capture")') && idleWindow.includes('.disabled = false'), 'idle handler enables capture');
