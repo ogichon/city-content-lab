@@ -51,7 +51,7 @@ class ConversionTests(unittest.TestCase):
         args = argparse.Namespace(zip=archive if zipped else None,
                                   gml_dir=None if zipped else self.source,
                                   out=self.root/'test.obj', report=self.root/'report.json',
-                                  anchor=(34.65, 135.383))
+                                  anchor=(34.65, 135.383), target_crs=6674)
         report = run(args)
         self.assertEqual(report, json.loads(args.report.read_text()))
         lines = args.out.read_text().splitlines()

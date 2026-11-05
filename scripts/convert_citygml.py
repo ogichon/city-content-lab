@@ -171,7 +171,7 @@ def run(args):
     # EPSG:6699 is an operation code, not a CRS. The dataset declares
     # EPSG:6697 (JGD2011 + vertical height); project its horizontal component
     # and preserve source heights rather than applying a vertical operation.
-    transformer = Transformer.from_crs(6697, 6674, always_xy=True)
+    transformer = Transformer.from_crs(6697, args.target_crs, always_xy=True)
     lat, lon = args.anchor
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         raise ValueError('anchor must be finite latitude/longitude in degrees')
@@ -182,8 +182,8 @@ def run(args):
                   feature_errors=0, errors=[], vertices=0, triangles=0,
                   interior_rings_ignored=0, non_planar_risk_count=0, local_bbox=None,
                   anchor_used={'latitude': lat, 'longitude': lon,
-                               'epsg_6674_east_north': list(anchor_xy)},
-                  source_crs='EPSG:6697', target_crs='EPSG:6674',
+                               f'epsg_{args.target_crs}_east_north': list(anchor_xy)},
+                  source_crs='EPSG:6697', target_crs=f'EPSG:{args.target_crs}',
                   brief_source_crs='EPSG:6699',
                   crs_note='EPSG:6699 is a vertical operation, not a CRS; use dataset EPSG:6697. Heights are preserved.',
                   declared_crs={}, namespaces={}, source_envelopes=[],
@@ -293,6 +293,7 @@ def main():
     source.add_argument('--gml-dir', type=Path)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--anchor', type=float, nargs=2, default=(34.6500, 135.3830), metavar=('LAT', 'LON'))
+    parser.add_argument('--target-crs', type=int, default=6674, help='plane-rectangular EPSG code (6674=Osaka zone VI, 6677=Tokyo zone IX)')
     parser.add_argument('--report', type=Path, required=True)
     args = parser.parse_args()
     if args.out.resolve() == args.report.resolve():
