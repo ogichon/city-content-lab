@@ -3,3 +3,4 @@ dist/
 *.log
 output/
 assets/basemap/
+__pycache__/
