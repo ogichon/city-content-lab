@@ -25,6 +25,9 @@ assert.deepEqual(ids.slice().sort(), manifest.recipes.map(r => r.id).sort());
 assert.ok(viewer.includes('MATERIALS[recipe.material]'));
 // Regression: parent-tile visibility must not block per-feature growth reveal.
 const layerModel = viewer.slice(viewer.indexOf('const layer = view.addLayer'), viewer.indexOf('const applyFeature'));
+assert.match(viewer, /id: "ccl-bloom", selectiveBloom:/);
+assert.match(layerModel, /model: \{[\s\S]*effectIds: \["ccl-bloom"\]/);
+assert.ok(layerModel.includes('...(recipe.mode === "material" && recipe.material && MATERIALS[recipe.material].opacity < 1 ? { transparent: true } : {})'));
 assert.ok(!layerModel.includes('show:'));
 for (const field of ['metalness', 'roughness']) assert.ok(layerModel.includes(`MATERIALS[recipe.material].${field}`));
 for (const id of ['app', 'recipe-title', 'note', 'play', 'reset', 'capture', 'status', 'cam', 'recipes', 'ground-attribution']) assert.ok(html.includes(`id="${id}"`), id);

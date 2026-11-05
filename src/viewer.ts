@@ -50,7 +50,7 @@ async function main() {
   }
   for (const effect of [
     { clouds: { coverage: 0.45, lightShafts: true, haze: true } },
-    { selectiveBloom: { strength: 0.85, radius: 0.6, threshold: 0.55, smoothing: 0.2 } },
+    { id: "ccl-bloom", selectiveBloom: { strength: 0.85, radius: 0.6, threshold: 0.55, smoothing: 0.2 } },
   ]) { try { const handle = view.addEffect(effect as any); if (recipe.mode === "lift" && "clouds" in effect) handle.update({ visible: false } as any); } catch (error) { console.warn("Optional effect unavailable", error); } }
   if (recipe.mode !== "lift") {
     const source = view.addSource({ type: "quantized-mesh", url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain", maxZoom: 18, requestVertexNormals: true, requestWaterMask: true } as any);
@@ -88,7 +88,13 @@ async function main() {
     const source = view.addSource({ type: "3d-tiles", url } as any);
     // Keep the tile object visible: per-feature show controls growth in the batch texture.
     // Metalness/roughness are uniform model properties in Navara 0.2.1.
-    const layer = view.addLayer({ type: "3d-tiles", source, model: { color: new Color().setHex(0xffffff), metalness: recipe.mode === "material" && recipe.material ? MATERIALS[recipe.material].metalness : 0, roughness: recipe.mode === "material" && recipe.material ? MATERIALS[recipe.material].roughness : 1 } } as any);
+    const layer = view.addLayer({ type: "3d-tiles", source, model: {
+      color: new Color().setHex(0xffffff),
+      effectIds: ["ccl-bloom"],
+      metalness: recipe.mode === "material" && recipe.material ? MATERIALS[recipe.material].metalness : 0,
+      roughness: recipe.mode === "material" && recipe.material ? MATERIALS[recipe.material].roughness : 1,
+      ...(recipe.mode === "material" && recipe.material && MATERIALS[recipe.material].opacity < 1 ? { transparent: true } : {}),
+    } } as any);
     const applyFeature = ({ featureSetId, evaluator }: any) => { evaluators.set(featureSetId, evaluator); evaluator.evaluate(style); };
     layer.on("featureCreated", applyFeature);
     layer.on("featureUpdated", applyFeature);
