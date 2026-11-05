@@ -12,7 +12,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "test": "node scripts/test-recipes.cjs && node scripts/test-viewer.cjs && node scripts/test-capture.cjs && node scripts/test-batch.cjs",
+    "test": "node scripts/test-recipes.cjs && node scripts/test-viewer.cjs && node scripts/test-capture.cjs && node scripts/test-batch.cjs && node scripts/test-gallery.cjs",
     "capture": "node scripts/capture.mjs"
   },
   "type": "module",
