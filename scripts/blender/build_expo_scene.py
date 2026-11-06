@@ -110,6 +110,27 @@ world.use_nodes = True
 bg = world.node_tree.nodes["Background"]
 bg.inputs[0].default_value = (0.72, 0.78, 0.84, 1.0)
 bg.inputs[1].default_value = 1.0
+if argval("--sky", "flat") == "nishita":
+    # Camera-only physical sky (EXP-009): the world doubles as the IBL, so
+    # feeding the sky into lighting blows the scene out. Light Path splits
+    # it — flat world lights, sky only where the camera looks.
+    sky = world.node_tree.nodes.new("ShaderNodeTexSky")
+    sky.sky_type = 'NISHITA'
+    sky.sun_elevation = float(argval("--sky-elev", "28")) * 3.14159265 / 180.0
+    sky.sun_rotation = float(argval("--sky-rot", "210")) * 3.14159265 / 180.0
+    sky.altitude = 0.0
+    nt = world.node_tree
+    bg_cam = nt.nodes.new("ShaderNodeBackground")
+    bg_cam.inputs[1].default_value = float(argval("--sky-strength", "1.0"))
+    nt.links.new(sky.outputs["Color"], bg_cam.inputs[0])
+    lp = nt.nodes.new("ShaderNodeLightPath")
+    mix = nt.nodes.new("ShaderNodeMixShader")
+    out = nt.nodes["World Output"]
+    nt.links.new(lp.outputs["Is Camera Ray"], mix.inputs[0])
+    nt.links.new(bg.outputs[0], mix.inputs[1])
+    nt.links.new(bg_cam.outputs[0], mix.inputs[2])
+    nt.links.new(mix.outputs[0], out.inputs[0])
+    print("CCL: nishita camera-sky", flush=True)
 
 # Sun + camera: high oblique from the sea (south-west), whole venue in frame
 sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
