@@ -94,6 +94,64 @@ class ConversionTests(unittest.TestCase):
             self.assertEqual(sum(report['skipped_feature_types'].values()), 1)
             self.assertEqual(report['files_parsed'], 1)
 
+    def test_textures_directory_zip_aggregate_and_missing_image(self):
+        # Appearance follows geometry, as in Expo. Solid members use XLinks.
+        for zipped in (False, True):
+            for aggregate in (False, True):
+                with self.subTest(zipped=zipped, aggregate=aggregate):
+                    shape = polygon('poly').replace('<g:LinearRing>', '<g:LinearRing g:id="ring">')
+                    solid = ('<b:lod3Solid><g:Solid g:id="solid"><g:exterior>'
+                             '<g:CompositeSurface><g:surfaceMember x:href="#poly"/>'
+                             '</g:CompositeSurface></g:exterior></g:Solid></b:lod3Solid>')
+                    target = 'solid' if aggregate else '#poly'
+                    app = f'''<a:appearance xmlns:a="http://www.opengis.net/citygml/appearance/2.0">
+                      <a:Appearance><a:surfaceDataMember><a:ParameterizedTexture>
+                      <a:imageURI>mesh_appearance/test.jpg</a:imageURI>
+                      <a:target uri="{target}"><a:TexCoordList>
+                      <a:textureCoordinates ring="#ring">0 0 1 0 1 1 0 1 0 0</a:textureCoordinates>
+                      </a:TexCoordList></a:target>
+                      </a:ParameterizedTexture></a:surfaceDataMember></a:Appearance></a:appearance>'''
+                    xml = member('b:Building', 'textured', solid + shape + app)
+                    xml += member('b:Building', 'plain', geometry('plain_poly'))
+                    if aggregate:
+                        # Expo also has global appearanceMember after city objects.
+                        xml = xml.replace(app, '') + app.replace('a:appearance', 'a:appearanceMember')
+                    path = self.source/'test.gml'
+                    path.write_text(HEADER + xml + '</c:CityModel>')
+                    image = self.source/'mesh_appearance'/'test.jpg'
+                    image.parent.mkdir(exist_ok=True)
+                    image.write_bytes(b'fixture image')
+                    archive = self.root/'textures.zip'
+                    with zipfile.ZipFile(archive, 'w') as z:
+                        z.write(path, 'udx/bldg/test.gml')
+                        z.write(image, 'udx/bldg/mesh_appearance/test.jpg')
+                    args = argparse.Namespace(zip=archive if zipped else None,
+                                              gml_dir=None if zipped else self.source,
+                                              out=self.root/'textured.obj', report=self.root/'texture.json',
+                                              anchor=(34.65, 135.383), target_crs=6674, textures=True)
+                    report = run(args)
+                    self.assertEqual((report['textured_surfaces'], report['textures_copied'],
+                                      report['missing_images']), (1, 1, 0))
+                    lines = args.out.read_text().splitlines()
+                    self.assertIn('mtllib textured.mtl', lines)
+                    self.assertIn('usemtl texture_1', lines)
+                    self.assertIn('vt 0.000000000 1.000000000', lines)
+                    self.assertEqual([line for line in lines if line.startswith('f ')],
+                                     ['f 1/1 2/2 3/3', 'f 1/1 3/3 4/4', 'f 5 6 7', 'f 5 7 8'])
+                    self.assertLess(lines.index('usemtl default'), lines.index('f 5 6 7'))
+                    self.assertIn('map_Kd textured_textures/texture_1.jpg',
+                                  args.out.with_suffix('.mtl').read_text())
+                    self.assertEqual((self.root/'textured_textures/texture_1.jpg').read_bytes(), b'fixture image')
+        # Missing images fall back to untextured faces and count distinct images.
+        args.zip = None
+        args.gml_dir = self.source
+        image.unlink()
+        report = run(args)
+        self.assertEqual(report['missing_images'], 1)
+        self.assertEqual(report['textured_surfaces'], 0)
+        self.assertNotIn('vt ', args.out.read_text())
+        self.assertIn('f 1 2 3', args.out.read_text())
+
     def test_nonplanar_and_unresolved_xlink(self):
         coords = COORDS.replace('34.65001 135.383 10', '34.65001 135.383 11')
         xml = member('b:Building', 'nonplanar', geometry('nonplanar_poly', coords=coords))
