@@ -98,6 +98,29 @@ world.use_nodes = True
 bg = world.node_tree.nodes["Background"]
 bg.inputs[0].default_value = (0.72, 0.78, 0.84, 1.0)
 bg.inputs[1].default_value = 1.0
+if argval("--sky", "flat") == "nishita":
+    # Physical sky as the CAMERA background only. Feeding it into the
+    # lighting as well blows the whole scene out (the world is the IBL):
+    # porcelain goes pure white and metallic gold reflects the bright
+    # sky and turns cream. The Light Path mix keeps the original flat
+    # world for light and paints the sky only where the camera looks.
+    sky = world.node_tree.nodes.new("ShaderNodeTexSky")
+    sky.sky_type = 'NISHITA'
+    sky.sun_elevation = float(argval("--sky-elev", "25")) * 3.14159265 / 180.0
+    sky.sun_rotation = float(argval("--sky-rot", "128")) * 3.14159265 / 180.0
+    sky.altitude = 0.0
+    nt = world.node_tree
+    bg_cam = nt.nodes.new("ShaderNodeBackground")
+    bg_cam.inputs[1].default_value = float(argval("--sky-strength", "1.0"))
+    nt.links.new(sky.outputs["Color"], bg_cam.inputs[0])
+    lp = nt.nodes.new("ShaderNodeLightPath")
+    mix = nt.nodes.new("ShaderNodeMixShader")
+    out = nt.nodes["World Output"]
+    nt.links.new(lp.outputs["Is Camera Ray"], mix.inputs[0])
+    nt.links.new(bg.outputs[0], mix.inputs[1])
+    nt.links.new(bg_cam.outputs[0], mix.inputs[2])
+    nt.links.new(mix.outputs[0], out.inputs[0])
+    print(f"CCL: nishita camera-sky elev={argval('--sky-elev', '25')} rot={argval('--sky-rot', '128')}", flush=True)
 
 sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
 bpy.context.scene.collection.objects.link(sun)
