@@ -168,6 +168,30 @@ scene.cycles.samples = SAMPLES
 scene.cycles.use_denoising = True
 scene.render.resolution_x = int(argval("--width", "640"))
 scene.render.resolution_y = int(argval("--height-px", "360"))
-scene.render.filepath = OUT
-bpy.ops.render.render(write_still=True)
-print(f"CCL: rendered {OUT}", flush=True)
+if "--anim" in argv:
+    # Motion check: keyframe the camera between --cam/--target (frame 1)
+    # and --cam2/--target2 (last frame), render a PNG sequence into OUT
+    # (a directory). Stills judge LOD1/flat scenes too harshly; parallax
+    # is part of the work. Assemble with ffmpeg afterwards.
+    frames = int(argval("--frames", "96"))
+    ci = argv.index("--cam2")
+    ti = argv.index("--target2")
+    cam2 = Vector(tuple(float(argv[ci + k]) for k in range(1, 4)))
+    tgt2 = Vector(tuple(float(argv[ti + k]) for k in range(1, 4)))
+    scene.frame_start, scene.frame_end = 1, frames
+    # The builder has already applied --cam/--target: that pose is frame 1.
+    cam.keyframe_insert("location", frame=1)
+    cam.keyframe_insert("rotation_euler", frame=1)
+    cam.location = cam2
+    cam.rotation_euler = (tgt2 - cam2).to_track_quat('-Z', 'Y').to_euler()
+    cam.keyframe_insert("location", frame=frames)
+    cam.keyframe_insert("rotation_euler", frame=frames)
+    os.makedirs(OUT, exist_ok=True)
+    scene.render.filepath = os.path.join(OUT, "f_")
+    scene.render.image_settings.file_format = 'PNG'
+    bpy.ops.render.render(animation=True)
+    print(f"CCL: animated {frames} frames -> {OUT}", flush=True)
+else:
+    scene.render.filepath = OUT
+    bpy.ops.render.render(write_still=True)
+    print(f"CCL: rendered {OUT}", flush=True)
