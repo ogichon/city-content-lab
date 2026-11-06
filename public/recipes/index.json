@@ -23,6 +23,38 @@
       "mode": "material",
       "group": "controlled",
       "material": "gold",
+      "performance": {
+        "shots": [
+          {
+            "camera": {
+              "distance": 380,
+              "pitch": -25,
+              "heading": 35
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 620,
+              "pitch": -40,
+              "heading": 65
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 900,
+              "pitch": -55,
+              "heading": 85
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          }
+        ],
+        "loop": true
+      },
       "seed": 1,
       "codeVersion": "0.1.0"
     },
@@ -154,6 +186,38 @@
       "time": "sunset",
       "mode": "growth",
       "growthOrder": "center-out",
+      "performance": {
+        "shots": [
+          {
+            "camera": {
+              "distance": 420,
+              "pitch": -35,
+              "heading": 35
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 700,
+              "pitch": -55,
+              "heading": 65
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 1000,
+              "pitch": -60,
+              "heading": 85
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          }
+        ],
+        "loop": true
+      },
       "seed": 42,
       "codeVersion": "0.1.0"
     },
@@ -257,6 +321,38 @@
       "place": "tokyo",
       "time": "night",
       "mode": "lift",
+      "performance": {
+        "shots": [
+          {
+            "camera": {
+              "distance": 380,
+              "pitch": -25,
+              "heading": 35
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 620,
+              "pitch": -30,
+              "heading": 65
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 900,
+              "pitch": -50,
+              "heading": 85
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          }
+        ],
+        "loop": true
+      },
       "seed": 7,
       "codeVersion": "0.1.0"
     },

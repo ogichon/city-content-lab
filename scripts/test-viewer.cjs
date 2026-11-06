@@ -48,3 +48,35 @@ assert.equal(actual.getRecipe(null).id, actual.RECIPES[0].id);
 assert.equal(actual.getRecipe('unknown').id, actual.RECIPES[0].id);
 assert.ok(new Set(Array.from({length:10}, (_, i) => actual.seededRank(i,139,35))).size > 1);
 console.log('PASS: actual seededRank determinism/range and recipe fallback logic');
+
+// Execute the real timeline implementation: camera semantics, easing, loop/hold.
+const stageCode = stripTypeScriptTypes(read('src/stage.ts')).replace(/^import .*;$/m, '').replaceAll('export ', '');
+const recipeCode = stripTypeScriptTypes(recipes).replaceAll('export ', '');
+const timeline = vm.runInNewContext(recipeCode + '\n' + stageCode + '\n({stageFrame, RECIPES, PLACES});');
+const performances = timeline.RECIPES.filter(r => r.performance);
+assert.equal(performances.length, 3);
+for (const recipe of performances) {
+  assert.equal(recipe.performance.shots.length, 3);
+  const total = recipe.performance.shots.reduce((n, shot) => {
+    assert.ok(Number.isFinite(shot.durationSec) && shot.durationSec > 0);
+    for (const value of Object.values(shot.camera)) assert.ok(Number.isFinite(value));
+    return n + shot.durationSec;
+  }, 0);
+  assert.ok(total >= 18 && total <= 30);
+  assert.equal(timeline.stageFrame(recipe, total + 1).progress, 1 / total);
+  const once = {...recipe, performance: {...recipe.performance, loop: false}};
+  const end = timeline.stageFrame(once, total + 10);
+  assert.equal(end.playing, false); assert.equal(end.progress, 1); assert.equal(end.shotIndex, 2);
+  assert.equal(JSON.stringify(end), JSON.stringify(timeline.stageFrame(once, total + 100)));
+}
+const base = timeline.PLACES.tokyo.camera;
+const sample = {place:'tokyo', mode:'standard', cameraOverride:{heading:350}, performance:{shots:[{camera:{heading:10,distance:720},durationSec:10}]}};
+const middle = timeline.stageFrame(sample,5);
+assert.equal(middle.camera.heading,0); assert.equal(middle.camera.distance,(base.distance+720)/2);
+assert.equal(middle.camera.lng,base.lng); assert.equal(middle.camera.lat,base.lat);
+assert.equal(timeline.stageFrame(sample,10).camera.heading,10);
+sample.performance.shots[0].ease = 'out';
+assert.ok(timeline.stageFrame(sample,5).camera.distance > middle.camera.distance);
+assert.ok(viewer.includes('stage && stageReady && !stageStarted'));
+assert.ok(viewer.includes('view.setCamera(frame.camera)'));
+console.log('PASS: stage definitions, interpolation, heading wrap, easing, loop and final hold');

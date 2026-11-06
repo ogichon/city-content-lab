@@ -1,3 +1,4 @@
+import { stageFrame } from "./stage";
 import ThreeView, { Color } from "@navaramap/three";
 import { DefaultPlugin, type DefaultDescriptions } from "@navaramap/three-default-plugin";
 import { getRecipe, RECIPES, PLACES, TIMES, MATERIALS, seededRank, effectiveCamera } from "./recipes";
@@ -21,9 +22,26 @@ async function main() {
   const evaluators = new Map<bigint, any>();
   const params = new URLSearchParams(location.search);
   if (params.get("ui") === "0") document.getElementById("ui")!.style.display = "none";
-  const recipe = getRecipe(params.get("recipe"));
+  const recipe = getRecipe(params.get("stage") ?? params.get("recipe"));
+  const stage = params.has("stage") && !!recipe.performance?.shots.length;
+  let stageStarted = false;
+  let stageReady = false;
+  let beginStage = () => {};
+  const stageState = { playing: false, shotIndex: 0, progress: 0 };
+  if (stage) {
+    (window as any).__stage = stageState;
+    document.getElementById("ui")!.style.display = "none";
+    const caption = document.createElement("p");
+    caption.id = "stage-caption"; caption.textContent = recipe.title;
+    document.body.append(caption);
+    const credits = document.createElement("p"); credits.id = "stage-credits";
+    credits.textContent = recipe.mode === "lift" ? "都市データ: PLATEAU / 国土交通省" : "都市データ: PLATEAU / 国土交通省 · 地理院タイル · Re:Earth Terrain";
+    document.body.append(credits);
+    // Time presets configure the scene at initialization only. Live time drift
+    // is unsupported; timeFrom/timeTo remain part of the durable recipe.
+  }
   const rawProgress = params.get("progress");
-  const fixedProgress = recipe.mode === "growth" && rawProgress !== null && rawProgress.trim() !== "" && Number.isFinite(Number(rawProgress))
+  const fixedProgress = !stage && recipe.mode === "growth" && rawProgress !== null && rawProgress.trim() !== "" && Number.isFinite(Number(rawProgress))
     ? clamp(Number(rawProgress)) : undefined;
   (window as any).__idle = false;
   const place = PLACES[recipe.place];
@@ -113,6 +131,7 @@ async function main() {
   try {
     (view as any).on("idle", () => {
       (window as any).__idle = true;
+      if (stage && stageReady && !stageStarted) beginStage();
       status("読み込み完了（idle検知）");
       // Enable capture here as well: a mid-setup error can abort the tail of
       // setup (where the button is normally enabled) while this handler,
@@ -154,12 +173,24 @@ async function main() {
     }, 50);
     report();
   };
+  beginStage = () => {
+    stop(); stageStarted = true; startedAt = performance.now();
+    document.getElementById("stage-caption")?.classList.add("playing");
+    const tick = () => {
+      const frame = stageFrame(recipe, (performance.now() - startedAt) / 1000);
+      Object.assign(stageState, { playing: frame.playing, shotIndex: frame.shotIndex, progress: frame.progress });
+      view.setCamera(frame.camera);
+      if (recipe.mode === "growth") { progress = frame.progress; refresh(); }
+      if (!frame.playing) stop();
+    };
+    timer = setInterval(tick, 50); tick();
+  };
   play.addEventListener("click", () => { if (timer !== undefined) { stop(); report(); } else start(); });
   reset.addEventListener("click", () => {
     stop(); progress = -1; orbitElapsed = 0; Object.assign(orbit, camera);
     view.setCamera(camera); refresh(); showCamera(); report();
   });
-  container.addEventListener("pointerdown", () => { if (recipe.mode === "lift") { stop(); report(); } });
+  container.addEventListener("pointerdown", () => { if (!stage && recipe.mode === "lift") { stop(); report(); } });
   document.getElementById("capture")!.addEventListener("click", () => {
     try {
       view.forceUpdate();
@@ -176,8 +207,17 @@ async function main() {
       view.forceUpdate();
     } catch (error) { status(`キャプチャ失敗: ${error}`); }
   });
-  window.addEventListener("pagehide", () => { stop(); if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
+  window.addEventListener("pagehide", () => { stop(); if (stage) { stageState.playing = false; stageStarted = false; stageReady = false; } if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
   window.addEventListener("pageshow", () => {
+    progress = fixedProgress ?? -1;
+    if (stage) {
+      stop(); stageStarted = false; stageReady = true;
+      Object.assign(stageState, { playing: false, shotIndex: 0, progress: 0 });
+      document.getElementById("stage-caption")?.classList.remove("playing");
+      view.setCamera(camera); progress = -1; refresh();
+      if ((window as any).__idle) beginStage();
+      return;
+    }
     stop(); progress = fixedProgress ?? -1; orbitElapsed = 0; Object.assign(orbit, camera);
     view.setCamera(camera); refresh(); showCamera();
     if (cameraTimer !== undefined) clearInterval(cameraTimer);
@@ -187,6 +227,9 @@ async function main() {
   cameraTimer = setInterval(showCamera, 2000); showCamera();
   play.disabled = reset.disabled = recipe.mode !== "growth" && recipe.mode !== "lift";
   (document.getElementById("capture") as HTMLButtonElement).disabled = false;
-  if (recipe.mode === "lift") start(); else report();
+  if (stage) {
+    stageReady = true;
+    if ((window as any).__idle) beginStage(); else report();
+  } else if (recipe.mode === "lift") start(); else report();
 }
 main().catch(error => { console.error(error); status(`エラー: ${error?.message ?? error}`); });
