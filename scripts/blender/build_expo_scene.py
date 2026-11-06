@@ -8,7 +8,7 @@ Usage:
       --out /tmp/expo-check.png [--samples 8] [--width 640] [--height-px 360]
 OBJ vertices are (east, north, height) local metres, Z-up data.
 """
-import bpy, sys
+import bpy, os, sys
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -78,6 +78,35 @@ print(f"CCL: ring centre=({cen.x:.0f},{cen.y:.0f},{cen.z:.0f}) dims=({ring.dimen
 
 # Ground: basemap photo plane at z=6.3 (OBJ heights carry a ~6.4m datum
 # offset) when --basemap is given, else a plain big plane.
+if "--terrain" in argv:
+    # DEM terrain (scripts/convert_dem.py, same local frame): photo-draped
+    # relief that rises through the flat basemap plane where the real
+    # ground does (island rim, mounds). UVs are generated from x/y in the
+    # basemap extent so the drape matches the flat plane seamlessly.
+    tex_path = os.path.abspath(argval("--basemap", ""))
+    tex = bpy.data.images.load(tex_path)
+    ex = [float(v) for v in argval("--basemap-extent", "-850 860 -760 640").split()]
+    tm = bpy.data.materials.new("CCL_terrain")
+    tm.use_nodes = True
+    tbsdf = tm.node_tree.nodes["Principled BSDF"]
+    tbsdf.inputs["Roughness"].default_value = 1.0
+    tnode = tm.node_tree.nodes.new("ShaderNodeTexImage")
+    tnode.image = tex
+    tm.node_tree.links.new(tnode.outputs["Color"], tbsdf.inputs["Base Color"])
+    before = set(bpy.context.scene.objects)
+    bpy.ops.wm.obj_import(filepath=os.path.abspath(argval("--terrain", "")), up_axis='Z', forward_axis='Y')
+    for obj in set(bpy.context.scene.objects) - before:
+        if obj.type != 'MESH':
+            continue
+        obj.data.materials.clear()
+        obj.data.materials.append(tm)
+        uv = obj.data.uv_layers.new(name="drape")
+        for loop in obj.data.loops:
+            v = obj.data.vertices[loop.vertex_index].co
+            uv.data[loop.index].uv = ((v.x - ex[0]) / (ex[1] - ex[0]),
+                                      (v.y - ex[2]) / (ex[3] - ex[2]))
+        print(f"CCL: terrain draped: {obj.name} ({len(obj.data.vertices)} verts)", flush=True)
+
 if "--basemap" in argv:
     ex = [float(v) for v in argval("--basemap-extent", "-850 860 -760 640").split()]
     import os
