@@ -78,6 +78,23 @@ print(f"CCL: ring centre=({cen.x:.0f},{cen.y:.0f},{cen.z:.0f}) dims=({ring.dimen
 
 # Ground: basemap photo plane at z=6.3 (OBJ heights carry a ~6.4m datum
 # offset) when --basemap is given, else a plain big plane.
+if "--surround" in argv:
+    # Surrounding city (EXP-012): a second OBJ in the same local frame
+    # (standard PLATEAU Osaka meshes around Yumeshima, converted with the
+    # same anchor/CRS), rendered porcelain like the venue's non-ring
+    # buildings. It fills the frame edges the venue-only photo plane
+    # leaves empty in high/wide shots.
+    before = set(bpy.context.scene.objects)
+    bpy.ops.wm.obj_import(filepath=os.path.abspath(argval("--surround", "")), up_axis='Z', forward_axis='Y')
+    n_sur = 0
+    for obj in set(bpy.context.scene.objects) - before:
+        if obj.type != 'MESH':
+            continue
+        obj.data.materials.clear()
+        obj.data.materials.append(porcelain)
+        n_sur += 1
+    print(f"CCL: surroundings imported: {n_sur} objects", flush=True)
+
 if "--terrain" in argv:
     # DEM terrain (scripts/convert_dem.py, same local frame): photo-draped
     # relief that rises through the flat basemap plane where the real
@@ -164,7 +181,23 @@ if argval("--sky", "flat") == "nishita":
 # Sun + camera: high oblique from the sea (south-west), whole venue in frame
 sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
 bpy.context.scene.collection.objects.link(sun)
-sun.rotation_euler = (0.9, 0.2, -0.6)
+if "--sun" in argv:
+    si = argv.index("--sun")
+    sun.rotation_euler = tuple(float(argv[si + k]) * 3.14159265 / 180.0 for k in range(1, 4))
+else:
+    sun.rotation_euler = (0.9, 0.2, -0.6)
+if "--world-strength" in argv:
+    # Dramatic grade (user direction 2026-11-06): dim the ambient fill so
+    # shadows sink and forms read by light, not by overall brightness.
+    bg.inputs[1].default_value = float(argval("--world-strength", "1.0"))
+if "--look" in argv:
+    try:
+        bpy.context.scene.view_settings.look = argval("--look", "None")
+        print(f"CCL: look = {bpy.context.scene.view_settings.look}", flush=True)
+    except Exception as e:
+        print(f"CCL: look set failed: {e}", flush=True)
+if "--exposure" in argv:
+    bpy.context.scene.view_settings.exposure = float(argval("--exposure", "0"))
 cam_data = bpy.data.cameras.new("Cam")
 cam = bpy.data.objects.new("Cam", cam_data)
 bpy.context.scene.collection.objects.link(cam)
@@ -207,7 +240,9 @@ if "--anim" in argv:
     ti = argv.index("--target2")
     cam2 = Vector(tuple(float(argv[ci + k]) for k in range(1, 4)))
     tgt2 = Vector(tuple(float(argv[ti + k]) for k in range(1, 4)))
-    scene.frame_start, scene.frame_end = 1, frames
+    # --frame-start lets a killed long render resume mid-sequence:
+    # keyframes live on absolute frames, so the motion is unchanged.
+    scene.frame_start, scene.frame_end = int(argval("--frame-start", "1")), frames
     # The builder has already applied --cam/--target: that pose is frame 1.
     cam.keyframe_insert("location", frame=1)
     cam.keyframe_insert("rotation_euler", frame=1)
@@ -215,6 +250,16 @@ if "--anim" in argv:
     cam.rotation_euler = (tgt2 - cam2).to_track_quat('-Z', 'Y').to_euler()
     cam.keyframe_insert("location", frame=frames)
     cam.keyframe_insert("rotation_euler", frame=frames)
+    if "--cam-mid" in argv and "--target-mid" in argv:
+        # Optional mid pose (three-act moves: detail -> rise -> reveal).
+        mi = argv.index("--cam-mid")
+        ti2 = argv.index("--target-mid")
+        mid = Vector(tuple(float(argv[mi + k]) for k in range(1, 4)))
+        tm = Vector(tuple(float(argv[ti2 + k]) for k in range(1, 4)))
+        cam.location = mid
+        cam.rotation_euler = (tm - mid).to_track_quat('-Z', 'Y').to_euler()
+        cam.keyframe_insert("location", frame=frames // 2)
+        cam.keyframe_insert("rotation_euler", frame=frames // 2)
     os.makedirs(OUT, exist_ok=True)
     scene.render.filepath = os.path.join(OUT, "f_")
     scene.render.image_settings.file_format = 'PNG'
