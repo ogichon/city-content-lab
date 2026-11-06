@@ -3,6 +3,13 @@
 
 Only stdlib and pyproj are required. Geometry is retained for one top-level
 feature at a time; local XLinks can refer to geometry anywhere in that feature.
+With --textures, an initial streaming pass indexes appearance targets on disk,
+including CityModel-level appearanceMember records. Images are copied beside the
+OBJ with UVs as-is (no vertical flip: CityGML texture coordinates already
+match OBJ sampling for these atlases — flipping v moved samples into the
+black padding of the atlas images and blacked out whole roofs; verified by
+A/B render, EXP-014). Texture statistics count exported
+surfaces and distinct successfully copied / missing images.
 Interior rings are counted but omitted; fan triangulation assumes convex patches.
 Cross-feature/external geometry XLinks are reported as feature errors.
 
@@ -18,9 +25,14 @@ Malformed XML is a file error and results in a nonzero exit with a partial OBJ.
 
 """
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 import json
 import math
+import posixpath
+import shutil
+import sqlite3
+import tempfile
+from urllib.parse import unquote, urlsplit
 from pathlib import Path
 import re
 import sys
@@ -111,7 +123,143 @@ def nonplanar(points):
     return False
 
 
-def convert_feature(feature, index, transformer, anchor_xy):
+def appearance(element, name):
+    uri, local = split_tag(element.tag)
+    return local == name and '/citygml/appearance/' in uri
+
+
+@contextmanager
+def appearance_index(opener):
+    """Expo stores appearanceMember at CityModel scope, after the features.
+
+    First stream only texture targets into a temporary disk index; the second
+    pass still buffers just one feature. Neither XML pass retains the file tree.
+    """
+    with tempfile.TemporaryDirectory(prefix='citygml-appearance-') as directory:
+        db = sqlite3.connect(str(Path(directory) / 'targets.sqlite'))
+        try:
+            db.execute('CREATE TABLE targets (identity TEXT PRIMARY KEY, image TEXT, xml TEXT)')
+            with opener() as stream:
+                stack = []
+                target_depth = 0
+                image = None
+                for event, element in ET.iterparse(stream, events=('start', 'end')):
+                    if event == 'start':
+                        stack.append(element)
+                        if appearance(element, 'ParameterizedTexture'):
+                            image = None
+                        if appearance(element, 'target'):
+                            target_depth += 1
+                        continue
+                    if appearance(element, 'imageURI'):
+                        image = (element.text or '').strip()
+                    if appearance(element, 'target'):
+                        if image:
+                            db.execute('INSERT OR REPLACE INTO targets VALUES (?, ?, ?)',
+                                       (element.get('uri', '').lstrip('#'), image,
+                                        ET.tostring(element, encoding='unicode')))
+                        target_depth -= 1
+                    if not target_depth:
+                        element.clear()
+                        if len(stack) > 1:
+                            stack[-2].remove(element)
+                    stack.pop()
+            db.commit()
+            yield db
+        finally:
+            db.close()
+
+
+def texture_bindings(index, database):
+    """Resolve polygon and aggregate targets using this feature's geometry only."""
+    bindings = {}
+    identities = list(index)
+    for start in range(0, len(identities), 500):
+        chunk = identities[start:start+500]
+        rows = database.execute('SELECT identity, image, xml FROM targets WHERE identity IN ('
+                                + ','.join('?' for _ in chunk) + ')', chunk)
+        for identity, image, xml in rows:
+            target = ET.fromstring(xml)
+            rings = {}
+            for uv in target.iter():
+                if appearance(uv, 'textureCoordinates') and uv.text:
+                    values = [float(v) for v in uv.text.split()]
+                    if len(values) % 2 or not all(math.isfinite(v) for v in values):
+                        raise ValueError('invalid texture coordinates')
+                    rings[uv.get('ring', '').lstrip('#')] = list(zip(values[::2], values[1::2]))
+            for polygon in polygons([index[identity]], index):
+                bindings[id(polygon)] = (image, rings)
+    return bindings
+
+
+class TextureWriter:
+    """Copy each referenced image once; material/image names cannot escape output."""
+    def __init__(self, args, stack, report):
+        self.folder = args.out.with_name(args.out.stem + '_textures')
+        self.mtl = stack.enter_context(args.out.with_suffix('.mtl').open('w', encoding='utf-8'))
+        self.mtl.write('newmtl default\nKd 0.8 0.8 0.8\n\n')
+        self.archive = stack.enter_context(zipfile.ZipFile(args.zip)) if args.zip else None
+        self.materials = {}
+        self.report = report
+        self.uv_count = 0
+        self.current = None
+
+    def material(self, filename, uri):
+        parsed = urlsplit(uri)
+        path = unquote(parsed.path).replace('\\', '/')
+        if self.archive:
+            key = posixpath.normpath(posixpath.join(posixpath.dirname(filename), path))
+        else:
+            key = str((Path(filename).parent / path).resolve())
+        if key in self.materials:
+            return self.materials[key]
+        name = f'texture_{len(self.materials) + 1}'
+        suffix = Path(path).suffix
+        if not re.fullmatch(r'\.[A-Za-z0-9]+', suffix):
+            suffix = '.img'
+        dest = self.folder / (name + suffix)
+        try:
+            if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment:
+                raise FileNotFoundError(uri)
+            stream = self.archive.open(key) if self.archive else Path(key).open('rb')
+            with stream:
+                self.folder.mkdir(parents=True, exist_ok=True)
+                with dest.open('wb') as output:
+                    shutil.copyfileobj(stream, output)
+        except (FileNotFoundError, KeyError, IsADirectoryError):
+            self.materials[key] = None
+            self.report['missing_images'] += 1
+            return None
+        self.materials[key] = name
+        self.report['textures_copied'] += 1
+        self.mtl.write(f'newmtl {name}\nKd 1 1 1\nmap_Kd {self.folder.name}/{dest.name}\n\n')
+        return name
+
+    def faces(self, obj, surface_data, offset, filename):
+        for start, count, binding in surface_data:
+            material, uv_start = None, None
+            if binding:
+                image, uvs = binding
+                material = self.material(filename, image)
+                if material:
+                    uv_start = self.uv_count + 1
+                    for u, v in uvs:
+                        obj.write(f'vt {u:.9f} {v:.9f}\n')
+                    self.uv_count += len(uvs)
+                    self.report['textured_surfaces'] += 1
+            chosen = material or 'default'
+            if self.current != chosen:
+                obj.write(f'usemtl {chosen}\n')
+                self.current = chosen
+            for i in range(1, count-1):
+                indices = (start, start+i, start+i+1)
+                if uv_start is None:
+                    obj.write('f {} {} {}\n'.format(*(offset+j for j in indices)))
+                else:
+                    obj.write('f ' + ' '.join(f'{offset+j}/{uv_start+j-start}' for j in indices) + '\n')
+
+
+def convert_feature(feature, index, transformer, anchor_xy, textures=False, bindings=None):
     levels = {}
     for e in owned_elements(feature):
         match = LOD.match(split_tag(e.tag)[1])
@@ -127,6 +275,7 @@ def convert_feature(feature, index, transformer, anchor_xy):
     if selected is None:
         return None
     vertices, faces = [], []
+    surface_data = []
     holes = risks = 0
     for polygon in patches:
         holes += sum(gml(e, 'interior') for e in polygon)
@@ -151,9 +300,25 @@ def convert_feature(feature, index, transformer, anchor_xy):
             points.append((east-anchor_xy[0], north-anchor_xy[1], height))
         risks += nonplanar(points)
         start = len(vertices)
+        if textures:
+            binding = (bindings or {}).get(id(polygon))
+            resolved = None
+            if binding:
+                image, rings = binding
+                ring = next((e for e in exterior.iter() if gml(e, 'LinearRing')), None)
+                uvs = rings.get(element_id(ring)) if ring is not None else None
+                if uvs is not None:
+                    # A closed GML ring usually repeats its first UV as well.
+                    if len(uvs) == len(coords)+1 and uvs[0] == uvs[-1]:
+                        uvs = uvs[:-1]
+                    if len(uvs) != len(coords):
+                        raise ValueError('texture coordinate count differs from exterior ring')
+                    resolved = (image, uvs)
+            surface_data.append((start, len(points), resolved))
         vertices.extend(points)
         faces.extend((start, start+i, start+i+1) for i in range(1, len(points)-1))
-    return selected, vertices, faces, holes, risks
+    result = selected, vertices, faces, holes, risks
+    return (*result, surface_data) if textures else result
 
 
 @contextmanager
@@ -188,17 +353,25 @@ def run(args):
                   crs_note='EPSG:6699 is a vertical operation, not a CRS; use dataset EPSG:6697. Heights are preserved.',
                   declared_crs={}, namespaces={}, source_envelopes=[],
                   file_errors=0)
+    textures = getattr(args, 'textures', False)
+    if textures:
+        report.update(textured_surfaces=0, textures_copied=0, missing_images=0)
     low, high = [math.inf]*3, [-math.inf]*3
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    with sources(args) as inputs, args.out.open('w', encoding='utf-8') as obj:
+    with ExitStack() as stack, sources(args) as inputs, args.out.open('w', encoding='utf-8') as obj:
         if not inputs:
             raise ValueError('no GML files found')
         obj.write('# CityGML; local east north height in metres, Z-up\n')
+        writer = TextureWriter(args, stack, report) if textures else None
+        if writer:
+            obj.write(f'mtllib {args.out.with_suffix(".mtl").name}\n')
         for filename, opener in inputs:
             stack = []
             feature_depth = 0
             try:
-                with opener() as stream:
+                with ExitStack() as file_stack:
+                    database = file_stack.enter_context(appearance_index(opener)) if textures else None
+                    stream = file_stack.enter_context(opener())
                     for event, item in ET.iterparse(stream, events=('start-ns', 'start', 'end')):
                         if event == 'start-ns':
                             prefix, uri = item
@@ -223,6 +396,7 @@ def run(args):
                             feature_depth -= 1
                             if feature_depth == 0:
                                 index = {element_id(e): e for e in item.iter() if element_id(e)}
+                                bindings = None
                                 for feature in item.iter():
                                     kind = feature_type(feature)
                                     if kind is None:
@@ -231,7 +405,9 @@ def run(args):
                                     try:
                                         if identity is None:
                                             raise ValueError('missing gml:id')
-                                        result = convert_feature(feature, index, transformer, anchor_xy)
+                                        if textures and bindings is None:
+                                            bindings = texture_bindings(index, database)
+                                        result = convert_feature(feature, index, transformer, anchor_xy, textures, bindings)
                                     except Exception as exc:
                                         report['feature_errors'] += 1
                                         report['errors'].append({'file': filename, 'type': kind,
@@ -240,7 +416,7 @@ def run(args):
                                     if result is None:
                                         report['features_without_geometry'] += 1
                                         continue
-                                    level, vertices, faces, holes, risks = result
+                                    level, vertices, faces, holes, risks = result[:5]
                                     name = re.sub(r'\s+', '_', identity)
                                     obj.write(f'o {name}\ng {kind}_{name}\n')
                                     for p in vertices:
@@ -248,8 +424,11 @@ def run(args):
                                         for j in range(3):
                                             low[j], high[j] = min(low[j], p[j]), max(high[j], p[j])
                                     offset = report['vertices']+1
-                                    for face in faces:
-                                        obj.write('f {} {} {}\n'.format(*(offset+i for i in face)))
+                                    if writer:
+                                        writer.faces(obj, result[5], offset, filename)
+                                    else:
+                                        for face in faces:
+                                            obj.write('f {} {} {}\n'.format(*(offset+i for i in face)))
                                     report['vertices'] += len(vertices)
                                     report['triangles'] += len(faces)
                                     report['features_written'] += 1
@@ -258,6 +437,10 @@ def run(args):
                                     report['per_lod_counts'][str(level)] += 1
                                     report['interior_rings_ignored'] += holes
                                     report['non_planar_risk_count'] += risks
+                                    del result, vertices, faces
+                                # Do not retain an index into the preceding feature tree
+                                # while iterparse buffers the next feature.
+                                del index, bindings, feature
                         if parent is not None and split_tag(parent.tag)[1] == 'cityObjectMember' and not feature_type(item):
                             uri, name = split_tag(item.tag)
                             key = f'{{{uri}}}{name}'
@@ -291,6 +474,7 @@ def main():
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument('--zip', type=Path)
     source.add_argument('--gml-dir', type=Path)
+    parser.add_argument('--textures', action='store_true', help='preserve appearance images and UVs in OBJ/MTL')
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--anchor', type=float, nargs=2, default=(34.6500, 135.3830), metavar=('LAT', 'LON'))
     parser.add_argument('--target-crs', type=int, default=6674, help='plane-rectangular EPSG code (6674=Osaka zone VI, 6677=Tokyo zone IX)')
@@ -300,7 +484,7 @@ def main():
         parser.error('--out and --report must differ')
     try:
         report = run(args)
-    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+    except (OSError, ValueError, zipfile.BadZipFile, sqlite3.Error) as exc:
         parser.exit(1, f'conversion failed: {exc}\n')
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 1 if report['file_errors'] else 0

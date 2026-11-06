@@ -64,12 +64,49 @@ for obj in bpy.context.scene.objects:
         obj.hide_render = True
         print(f"CCL: hidden (water-plaza basin shell): {obj.name}", flush=True)
         continue
+    if "--textured" in argv:
+        # EXP-014: keep the OBJ importer's MTL materials (real PLATEAU
+        # appearance textures, converted with --textures). No porcelain,
+        # no gold — the full-texture direction chosen by the owner.
+        if obj.name.startswith(RING):
+            ring = obj
+        continue
     obj.data.materials.clear()
     if obj.name.startswith(RING):
         obj.data.materials.append(gold)
         ring = obj
     else:
         obj.data.materials.append(porcelain)
+if "--textured" in argv:
+    # EXP-014 lift: some LOD3 shells are wound so their outward faces get
+    # no light at all and textured surfaces render pure black (verified:
+    # world 2.0 + flipped sun changes nothing). The porcelain route hid
+    # this with its 16% emission lift; give textured materials the same
+    # floor — emission fed by their own texture (or base colour).
+    lift = float(argval("--lift", "0.18"))
+    done = set()
+    for mat in bpy.data.materials:
+        if mat is None or mat.name in done or not mat.use_nodes:
+            continue
+        done.add(mat.name)
+        nt = mat.node_tree
+        out = next((n for n in nt.nodes if n.type == 'OUTPUT_MATERIAL'), None)
+        princ = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if out is None or princ is None or not out.inputs['Surface'].links:
+            continue
+        tex = next((n for n in nt.nodes if n.type == 'TEX_IMAGE'), None)
+        emis = nt.nodes.new('ShaderNodeEmission')
+        emis.inputs['Strength'].default_value = lift
+        if tex is not None:
+            nt.links.new(tex.outputs['Color'], emis.inputs['Color'])
+        else:
+            emis.inputs['Color'].default_value = princ.inputs['Base Color'].default_value
+        add = nt.nodes.new('ShaderNodeAddShader')
+        nt.links.new(princ.outputs['BSDF'], add.inputs[0])
+        nt.links.new(emis.outputs['Emission'], add.inputs[1])
+        nt.links.new(add.outputs['Shader'], out.inputs['Surface'])
+    print(f"CCL: texture lift {lift} applied to {len(done)} materials", flush=True)
+
 if ring is None:
     raise SystemExit("ring object not found after import")
 bb = [ring.matrix_world @ Vector(c) for c in ring.bound_box]
