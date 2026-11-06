@@ -1,0 +1,264 @@
+{
+  "files_parsed": 10,
+  "buildings_written": 1185,
+  "features_written": 1185,
+  "feature_type_counts": {
+    "Building": 1185
+  },
+  "per_lod_counts": {
+    "1": 838,
+    "2": 347,
+    "3": 0,
+    "4": 0
+  },
+  "skipped_feature_types": {},
+  "features_without_geometry": 0,
+  "feature_errors": 0,
+  "errors": [],
+  "vertices": 60342,
+  "triangles": 34756,
+  "interior_rings_ignored": 59,
+  "non_planar_risk_count": 113,
+  "local_bbox": {
+    "min": [
+      -387.2956150702594,
+      -1867.6655205805437,
+      -4.0506
+    ],
+    "max": [
+      3891.0443849303847,
+      1847.0413616670703,
+      126.58116889
+    ]
+  },
+  "anchor_used": {
+    "latitude": 34.65,
+    "longitude": 135.383,
+    "epsg_6674_east_north": [
+      -56558.314384931065,
+      -149589.72447951962
+    ]
+  },
+  "source_crs": "EPSG:6697",
+  "target_crs": "EPSG:6674",
+  "brief_source_crs": "EPSG:6699",
+  "crs_note": "EPSG:6699 is a vertical operation, not a CRS; use dataset EPSG:6697. Heights are preserved.",
+  "declared_crs": {
+    "http://www.opengis.net/def/crs/EPSG/0/6697": 10
+  },
+  "namespaces": {
+    "brid": [
+      "http://www.opengis.net/citygml/bridge/2.0"
+    ],
+    "tran": [
+      "http://www.opengis.net/citygml/transportation/2.0"
+    ],
+    "frn": [
+      "http://www.opengis.net/citygml/cityfurniture/2.0"
+    ],
+    "wtr": [
+      "http://www.opengis.net/citygml/waterbody/2.0"
+    ],
+    "sch": [
+      "http://www.ascc.net/xml/schematron"
+    ],
+    "veg": [
+      "http://www.opengis.net/citygml/vegetation/2.0"
+    ],
+    "xlink": [
+      "http://www.w3.org/1999/xlink"
+    ],
+    "tun": [
+      "http://www.opengis.net/citygml/tunnel/2.0"
+    ],
+    "tex": [
+      "http://www.opengis.net/citygml/texturedsurface/2.0"
+    ],
+    "gml": [
+      "http://www.opengis.net/gml"
+    ],
+    "app": [
+      "http://www.opengis.net/citygml/appearance/2.0"
+    ],
+    "gen": [
+      "http://www.opengis.net/citygml/generics/2.0"
+    ],
+    "dem": [
+      "http://www.opengis.net/citygml/relief/2.0"
+    ],
+    "luse": [
+      "http://www.opengis.net/citygml/landuse/2.0"
+    ],
+    "uro": [
+      "https://www.geospatial.jp/iur/uro/3.1"
+    ],
+    "xAL": [
+      "urn:oasis:names:tc:ciq:xsdschema:xAL:2.0"
+    ],
+    "bldg": [
+      "http://www.opengis.net/citygml/building/2.0"
+    ],
+    "smil20": [
+      "http://www.w3.org/2001/SMIL20/"
+    ],
+    "xsi": [
+      "http://www.w3.org/2001/XMLSchema-instance"
+    ],
+    "smil20lang": [
+      "http://www.w3.org/2001/SMIL20/Language"
+    ],
+    "pbase": [
+      "http://www.opengis.net/citygml/profiles/base/2.0"
+    ],
+    "core": [
+      "http://www.opengis.net/citygml/2.0"
+    ],
+    "grp": [
+      "http://www.opengis.net/citygml/cityobjectgroup/2.0"
+    ]
+  },
+  "source_envelopes": [
+    {
+      "file": "gml/51357361_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.63796590029131,
+        135.39881550060377,
+        0.0
+      ],
+      "upperCorner": [
+        34.63802677489292,
+        135.3988826448208,
+        7.0
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357362_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.633262402104414,
+        135.4001452625965,
+        0.0
+      ],
+      "upperCorner": [
+        34.64165569381242,
+        135.4140250292173,
+        69.34
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357372_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.641698794530626,
+        135.4085785509904,
+        -4.0506
+      ],
+      "upperCorner": [
+        34.64334635667124,
+        135.414106659657,
+        15.219999999999999
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357373_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.64117456382446,
+        135.41216439485154,
+        0.0
+      ],
+      "upperCorner": [
+        34.644627180087035,
+        135.4249861548596,
+        117.45
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357382_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.65396352577046,
+        135.40046119,
+        0.0
+      ],
+      "upperCorner": [
+        34.65617983175095,
+        135.40407997,
+        11.166
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357383_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.65296010672826,
+        135.41536225997004,
+        0.0
+      ],
+      "upperCorner": [
+        34.65847407376945,
+        135.4245724422286,
+        15.07
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357390_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.65851333818354,
+        135.37871113529127,
+        0.0
+      ],
+      "upperCorner": [
+        34.65993038020522,
+        135.38718901492882,
+        11.18
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357391_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.661327956604836,
+        135.38849765,
+        0.0
+      ],
+      "upperCorner": [
+        34.6666932546434,
+        135.40009781,
+        51.28824222
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357392_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.659929455151016,
+        135.3997481798364,
+        0.0
+      ],
+      "upperCorner": [
+        34.6667180654466,
+        135.41053292196102,
+        126.58116889
+      ],
+      "anchor_inside_horizontal_bbox": false
+    },
+    {
+      "file": "gml/51357393_bldg_6697_op.gml",
+      "lowerCorner": [
+        34.65807075960205,
+        135.4158681333302,
+        0.0
+      ],
+      "upperCorner": [
+        34.66675454204027,
+        135.4253534150563,
+        46.880000000006
+      ],
+      "anchor_inside_horizontal_bbox": false
+    }
+  ],
+  "file_errors": 0,
+  "declared_crs_mismatch": []
+}
