@@ -27,27 +27,27 @@
         "shots": [
           {
             "camera": {
-              "distance": 380,
-              "pitch": -25,
-              "heading": 35
+              "distance": 360,
+              "pitch": -22,
+              "heading": 30
             },
             "durationSec": 8,
             "ease": "inout"
           },
           {
             "camera": {
-              "distance": 620,
-              "pitch": -40,
-              "heading": 65
+              "distance": 500,
+              "pitch": -32,
+              "heading": 55
             },
             "durationSec": 8,
             "ease": "inout"
           },
           {
             "camera": {
-              "distance": 900,
-              "pitch": -55,
-              "heading": 85
+              "distance": 660,
+              "pitch": -45,
+              "heading": 78
             },
             "durationSec": 8,
             "ease": "inout"
@@ -190,27 +190,27 @@
         "shots": [
           {
             "camera": {
-              "distance": 420,
-              "pitch": -35,
-              "heading": 35
+              "distance": 400,
+              "pitch": -30,
+              "heading": 30
             },
             "durationSec": 8,
             "ease": "inout"
           },
           {
             "camera": {
-              "distance": 700,
-              "pitch": -55,
-              "heading": 65
+              "distance": 540,
+              "pitch": -42,
+              "heading": 55
             },
             "durationSec": 8,
             "ease": "inout"
           },
           {
             "camera": {
-              "distance": 1000,
-              "pitch": -60,
-              "heading": 85
+              "distance": 680,
+              "pitch": -50,
+              "heading": 78
             },
             "durationSec": 8,
             "ease": "inout"
@@ -325,9 +325,18 @@
         "shots": [
           {
             "camera": {
-              "distance": 380,
-              "pitch": -25,
-              "heading": 35
+              "distance": 360,
+              "pitch": -22,
+              "heading": 30
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "distance": 480,
+              "pitch": -30,
+              "heading": 55
             },
             "durationSec": 8,
             "ease": "inout"
@@ -335,17 +344,8 @@
           {
             "camera": {
               "distance": 620,
-              "pitch": -30,
-              "heading": 65
-            },
-            "durationSec": 8,
-            "ease": "inout"
-          },
-          {
-            "camera": {
-              "distance": 900,
-              "pitch": -50,
-              "heading": 85
+              "pitch": -42,
+              "heading": 78
             },
             "durationSec": 8,
             "ease": "inout"

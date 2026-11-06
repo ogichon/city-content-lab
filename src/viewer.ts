@@ -69,7 +69,10 @@ async function main() {
   const scene = plugin.addDefaultPhotorealScene();
   scene.sun.update({ sun: { castShadow: true } } as any);
   view.addLight({ ambient: { intensity: time.ambient, color: new Color().setHex(0x93a7cc) } } as any);
-  view.toneMappingExposure = time.exposure;
+  // Stage mode reads darker than the tuned static framings (wide shots at
+  // sunset/night fall off a cliff), so performances get a modest exposure
+  // lift. Only ever raises exposure; the static viewer is unchanged.
+  view.toneMappingExposure = time.exposure * (stage ? 1.25 : 1);
   if (recipe.mode === "lift") {
     scene.sky.update({ visible: false });
     scene.stars.update({ visible: false });
