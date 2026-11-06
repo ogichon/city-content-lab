@@ -30,3 +30,7 @@ assert.ok(html.includes('image.alt = work.title'));
 assert.ok(html.includes("badge.textContent = '候補'"));
 assert.ok(html.includes('候補作品を読み込めませんでした。'));
 console.log('PASS: gallery manifest, five candidate JPEGs, and page static contracts');
+
+assert.ok(html.includes('recipe.performance'));
+assert.ok(html.includes('viewer.html?stage='));
+assert.ok(html.includes('動く作品を開く'));

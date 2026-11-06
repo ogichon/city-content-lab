@@ -1,0 +1,36 @@
+import { PLACES, type Recipe, type PlaceDef } from "./recipes";
+
+// ?stage=<recipeId> is the sole autoplay convention. Each shot is a travel
+// from the preceding target (initially effectiveCamera) to base + overrides.
+export function stageFrame(recipe: Recipe, elapsedSec: number) {
+  const performance = recipe.performance!;
+  const total = performance.shots.reduce((sum, shot) => sum + shot.durationSec, 0);
+  const finished = !performance.loop && elapsedSec >= total;
+  const elapsed = finished ? total : Math.max(0, elapsedSec) % total;
+  const base = PLACES[recipe.place].camera;
+  let from = { ...base, ...recipe.cameraOverride };
+  let remaining = elapsed;
+  for (let i = 0; i < performance.shots.length; i++) {
+    const shot = performance.shots[i];
+    const to = { ...base, ...shot.camera };
+    if (remaining <= shot.durationSec || i === performance.shots.length - 1) {
+      const t = Math.min(1, remaining / shot.durationSec);
+      const eased = shot.ease === "inout" ? t * t * (3 - 2 * t) : shot.ease === "out" ? 1 - (1 - t) ** 3 : t;
+      const camera = { ...from };
+      for (const key of Object.keys(camera) as Array<keyof PlaceDef["camera"]>) {
+        const delta = key === "heading" ? ((to[key] - from[key]) % 360 + 540) % 360 - 180 : to[key] - from[key];
+        camera[key] = from[key] + delta * eased;
+      }
+      camera.heading = (camera.heading % 360 + 360) % 360;
+      // Preserve LIFT-LITE's existing orbit and breathing, scaled to the show.
+      if (recipe.mode === "lift") {
+        camera.heading = (camera.heading + elapsed * 1.2) % 360;
+        camera.distance *= 1 + 0.025 * Math.sin(elapsed / 6);
+      }
+      return { camera, shotIndex: i, progress: elapsed / total, playing: !finished };
+    }
+    remaining -= shot.durationSec;
+    from = to;
+  }
+  throw new Error("Stage requires at least one shot");
+}
