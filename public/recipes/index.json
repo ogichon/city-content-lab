@@ -325,8 +325,8 @@
         "shots": [
           {
             "camera": {
-              "distance": 360,
-              "pitch": -22,
+              "distance": 520,
+              "pitch": -38,
               "heading": 30
             },
             "durationSec": 8,
@@ -334,8 +334,8 @@
           },
           {
             "camera": {
-              "distance": 480,
-              "pitch": -30,
+              "distance": 620,
+              "pitch": -44,
               "heading": 55
             },
             "durationSec": 8,
@@ -343,8 +343,8 @@
           },
           {
             "camera": {
-              "distance": 620,
-              "pitch": -42,
+              "distance": 720,
+              "pitch": -48,
               "heading": 78
             },
             "durationSec": 8,
