@@ -150,7 +150,7 @@ export const RECIPES: Recipe[] = [
   // EXP-001: LIFT-LITE. True geometric cutting is out of Navara's reach;
   // this isolates the building cluster in a dark void (no terrain/photo)
   // to test the floating-diorama composition. Recorded as LITE, not LIFT.
-  { id: "exp001-lift-tokyo", experiment: "EXP-001", title: "CITY LIFT-LITE / 東京駅・浮遊ジオラマ", place: "tokyo", time: "night", mode: "lift", performance: { shots: [{ camera: { distance: 360, pitch: -22, heading: 30 }, durationSec: 8, ease: "inout" }, { camera: { distance: 480, pitch: -30, heading: 55 }, durationSec: 8, ease: "inout" }, { camera: { distance: 620, pitch: -42, heading: 78 }, durationSec: 8, ease: "inout" }], loop: true }, seed: 7, codeVersion: CODE_VERSION },
+  { id: "exp001-lift-tokyo", experiment: "EXP-001", title: "CITY LIFT-LITE / 東京駅・浮遊ジオラマ", place: "tokyo", time: "night", mode: "lift", performance: { shots: [{ camera: { distance: 520, pitch: -38, heading: 30 }, durationSec: 8, ease: "inout" }, { camera: { distance: 620, pitch: -44, heading: 55 }, durationSec: 8, ease: "inout" }, { camera: { distance: 720, pitch: -48, heading: 78 }, durationSec: 8, ease: "inout" }], loop: true }, seed: 7, codeVersion: CODE_VERSION },
   { id: "exp001-lift-tocho", experiment: "EXP-001", title: "CITY LIFT-LITE / 都庁・浮遊ジオラマ", place: "tocho", time: "night", mode: "lift", seed: 7, codeVersion: CODE_VERSION },
 ];
 

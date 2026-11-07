@@ -26,7 +26,7 @@ async function main() {
   const stage = params.has("stage") && !!recipe.performance?.shots.length;
   let stageStarted = false;
   let stageReady = false;
-  let probeTimer: ReturnType<typeof setInterval> | undefined;
+  let probeArmed = false;
   let beginStage = () => {};
   const stageState = { playing: false, shotIndex: 0, progress: 0 };
   if (stage) {
@@ -201,36 +201,40 @@ async function main() {
     }, 50);
     report();
   };
-  // EXP-016 luminance probe: samples the rendered canvas on postRender (the
-  // same readback point as capture) so stage brightness is a number, not an
-  // impression. Diagnostic only; failures leave the show untouched.
+  // EXP-016/017 luminance probe: ONE persistent postRender handler (the same
+  // readback point as capture), throttled by frame count, so stage brightness
+  // is a number, not an impression. Diagnostic only: every failure path is
+  // caught and the error name is surfaced on the probe element itself, so a
+  // single screenshot identifies why sampling failed.
   const probeCanvas = document.createElement("canvas"); probeCanvas.width = 48; probeCanvas.height = 27;
   const probeCtx = probeCanvas.getContext("2d", { willReadFrequently: true });
+  let probeFrames = 0;
   const sampleProbe = () => {
-    const handler = () => {
-      (view as any).off("postRender", handler);
-      try {
-        const canvas = container.querySelector("canvas"); if (!canvas || !probeCtx) return;
-        probeCtx.drawImage(canvas as HTMLCanvasElement, 0, 0, 48, 27);
-        const data = probeCtx.getImageData(0, 0, 48, 27).data;
-        const n = 48 * 27; let sum = 0, black = 0, groundSum = 0;
-        for (let i = 0; i < n; i++) {
-          const lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
-          sum += lum; if (lum < 0.05) black++;
-          if (i >= n / 2) groundSum += lum;
-        }
-        const probe = { mean: +(sum / n).toFixed(3), blackFrac: +(black / n).toFixed(3), groundMean: +(groundSum / (n / 2)).toFixed(3) };
-        (stageState as any).probe = probe;
-        const el = document.getElementById("stage-probe");
-        if (el) el.textContent = `shot ${stageState.shotIndex + 1} · mean ${probe.mean} · ground ${probe.groundMean} · black ${Math.round(probe.blackFrac * 100)}%`;
-      } catch (error) { /* diagnostic only */ }
-    };
-    (view as any).on("postRender", handler);
+    try {
+      const canvas = container.querySelector("canvas"); if (!canvas || !probeCtx) return;
+      probeCtx.drawImage(canvas as HTMLCanvasElement, 0, 0, 48, 27);
+      const data = probeCtx.getImageData(0, 0, 48, 27).data;
+      const n = 48 * 27; let sum = 0, black = 0, groundSum = 0;
+      for (let i = 0; i < n; i++) {
+        const lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
+        sum += lum; if (lum < 0.05) black++;
+        if (i >= n / 2) groundSum += lum;
+      }
+      const probe = { mean: +(sum / n).toFixed(3), blackFrac: +(black / n).toFixed(3), groundMean: +(groundSum / (n / 2)).toFixed(3) };
+      (stageState as any).probe = probe;
+      const el = document.getElementById("stage-probe");
+      if (el) el.textContent = `shot ${stageState.shotIndex + 1} · mean ${probe.mean} · ground ${probe.groundMean} · black ${Math.round(probe.blackFrac * 100)}%`;
+    } catch (error) {
+      (stageState as any).probeError = String((error as any)?.name ?? error);
+      const el = document.getElementById("stage-probe");
+      if (el && !el.textContent?.startsWith("probe err")) el.textContent = `probe err: ${(error as any)?.name ?? "unknown"}`;
+    }
   };
+  const probeHandler = () => { if (stageStarted && ++probeFrames % 30 === 0) sampleProbe(); };
   beginStage = () => {
     stop(); stageStarted = true; startedAt = performance.now();
     document.getElementById("stage-caption")?.classList.add("playing");
-    if (probeTimer === undefined) { sampleProbe(); probeTimer = setInterval(sampleProbe, 800); }
+    if (!probeArmed) { probeArmed = true; (view as any).on("postRender", probeHandler); }
     const tick = () => {
       const frame = stageFrame(recipe, (performance.now() - startedAt) / 1000);
       Object.assign(stageState, { playing: frame.playing, shotIndex: frame.shotIndex, progress: frame.progress });
@@ -262,7 +266,7 @@ async function main() {
       view.forceUpdate();
     } catch (error) { status(`キャプチャ失敗: ${error}`); }
   });
-  window.addEventListener("pagehide", () => { stop(); if (probeTimer !== undefined) clearInterval(probeTimer); probeTimer = undefined; if (stage) { stageState.playing = false; stageStarted = false; stageReady = false; } if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
+  window.addEventListener("pagehide", () => { stop(); if (stage) { stageState.playing = false; stageStarted = false; stageReady = false; } if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
   window.addEventListener("pageshow", () => {
     progress = fixedProgress ?? -1;
     if (stage) {

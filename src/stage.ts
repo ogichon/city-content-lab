@@ -22,11 +22,10 @@ export function stageFrame(recipe: Recipe, elapsedSec: number) {
         camera[key] = from[key] + delta * eased;
       }
       camera.heading = (camera.heading % 360 + 360) % 360;
-      // Preserve LIFT-LITE's existing orbit and breathing, scaled to the show.
-      if (recipe.mode === "lift") {
-        camera.heading = (camera.heading + elapsed * 1.2) % 360;
-        camera.distance *= 1 + 0.025 * Math.sin(elapsed / 6);
-      }
+      // EXP-017: stage choreography is authoritative for lift too. The old
+      // extra orbit (+1.2 deg/s) and distance breathing compounded with the
+      // shot interpolation and pushed the camera into the lifted slab field,
+      // so they are no longer applied during performances.
       return { camera, shotIndex: i, progress: elapsed / total, playing: !finished };
     }
     remaining -= shot.durationSec;
