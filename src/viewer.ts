@@ -26,6 +26,7 @@ async function main() {
   const stage = params.has("stage") && !!recipe.performance?.shots.length;
   let stageStarted = false;
   let stageReady = false;
+  let probeTimer: ReturnType<typeof setInterval> | undefined;
   let beginStage = () => {};
   const stageState = { playing: false, shotIndex: 0, progress: 0 };
   if (stage) {
@@ -37,6 +38,8 @@ async function main() {
     const credits = document.createElement("p"); credits.id = "stage-credits";
     credits.textContent = recipe.mode === "lift" ? "都市データ: PLATEAU / 国土交通省" : "都市データ: PLATEAU / 国土交通省 · 地理院タイル · Re:Earth Terrain";
     document.body.append(credits);
+    const probe = document.createElement("p"); probe.id = "stage-probe"; probe.textContent = "probe …";
+    document.body.append(probe);
     // Time presets configure the scene at initialization only. Live time drift
     // is unsupported; timeFrom/timeTo remain part of the durable recipe.
   }
@@ -68,6 +71,14 @@ async function main() {
   (window as any).__view = view;
   const scene = plugin.addDefaultPhotorealScene();
   scene.sun.update({ sun: { castShadow: true } } as any);
+  if (stage) {
+    // EXP-016 structural grade: the default photoreal scene extinguishes
+    // light with distance (aerial-perspective transmittance), which is the
+    // main "pull back and it goes black" path at sunset/night. Performances
+    // opt out; the tuned static recipes keep the stock atmosphere.
+    try { (scene as any).aerialPerspective?.update({ aerialPerspective: { transmittance: false } } as any); }
+    catch (error) { console.warn("aerialPerspective unavailable", error); }
+  }
   view.addLight({ ambient: { intensity: time.ambient, color: new Color().setHex(0x93a7cc) } } as any);
   // Stage mode reads darker than the tuned static framings (wide shots at
   // sunset/night fall off a cliff), so performances get a modest exposure
@@ -77,13 +88,27 @@ async function main() {
     scene.sky.update({ visible: false });
     scene.stars.update({ visible: false });
   }
+  let cloudsHandle: any;
   for (const effect of [
     { clouds: { coverage: 0.45, lightShafts: true, haze: true } },
     { id: "ccl-bloom", selectiveBloom: { strength: 0.85, radius: 0.6, threshold: 0.55, smoothing: 0.2 } },
-  ]) { try { const handle = view.addEffect(effect as any); if (recipe.mode === "lift" && "clouds" in effect) handle.update({ visible: false } as any); } catch (error) { console.warn("Optional effect unavailable", error); } }
+  ]) { try { const handle = view.addEffect(effect as any); if ("clouds" in effect) cloudsHandle = handle; if (recipe.mode === "lift" && "clouds" in effect) handle.update({ visible: false } as any); } catch (error) { console.warn("Optional effect unavailable", error); } }
+  if (stage && cloudsHandle && recipe.mode !== "lift") {
+    // EXP-016: cloud haze is the second distance-darkening path; zero it for
+    // performances (the proto measured haze density as a real factor).
+    try { cloudsHandle.update({ clouds: { hazeDensityScale: 0 } } as any); }
+    catch (error) { console.warn("cloud haze update unavailable", error); }
+  }
   if (recipe.mode !== "lift") {
     const source = view.addSource({ type: "quantized-mesh", url: "https://terrain.reearth.land/cesium-mesh/ellipsoid/{z}/{x}/{y}.terrain", maxZoom: 18, requestVertexNormals: true, requestWaterMask: true } as any);
-    view.addLayer({ type: "terrain", source, terrain: { castShadow: true, receiveShadow: true } } as any);
+    const terrainLayer = view.addLayer({ type: "terrain", source, terrain: { castShadow: true, receiveShadow: true } } as any);
+    if (stage) {
+      // EXP-016: at a 1.5-degree sun a lit ground receives ~3% direct light
+      // and the photo basemap crushes to black. Performances run the ground
+      // unlit so its brightness is governed by the recipe tint alone.
+      try { terrainLayer.update({ type: "terrain", source, terrain: { castShadow: true, receiveShadow: true, lit: false } } as any); }
+      catch (error) { console.warn("terrain lit update unavailable", error); }
+    }
     const photo = view.addSource({ type: "raster-tile", url: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", maxZoom: 18 } as any);
     view.addLayer({ type: "raster", source: photo, raster: { color: new Color().setHex(time.groundTint) } } as any);
   }
@@ -176,9 +201,36 @@ async function main() {
     }, 50);
     report();
   };
+  // EXP-016 luminance probe: samples the rendered canvas on postRender (the
+  // same readback point as capture) so stage brightness is a number, not an
+  // impression. Diagnostic only; failures leave the show untouched.
+  const probeCanvas = document.createElement("canvas"); probeCanvas.width = 48; probeCanvas.height = 27;
+  const probeCtx = probeCanvas.getContext("2d", { willReadFrequently: true });
+  const sampleProbe = () => {
+    const handler = () => {
+      (view as any).off("postRender", handler);
+      try {
+        const canvas = container.querySelector("canvas"); if (!canvas || !probeCtx) return;
+        probeCtx.drawImage(canvas as HTMLCanvasElement, 0, 0, 48, 27);
+        const data = probeCtx.getImageData(0, 0, 48, 27).data;
+        const n = 48 * 27; let sum = 0, black = 0, groundSum = 0;
+        for (let i = 0; i < n; i++) {
+          const lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
+          sum += lum; if (lum < 0.05) black++;
+          if (i >= n / 2) groundSum += lum;
+        }
+        const probe = { mean: +(sum / n).toFixed(3), blackFrac: +(black / n).toFixed(3), groundMean: +(groundSum / (n / 2)).toFixed(3) };
+        (stageState as any).probe = probe;
+        const el = document.getElementById("stage-probe");
+        if (el) el.textContent = `shot ${stageState.shotIndex + 1} · mean ${probe.mean} · ground ${probe.groundMean} · black ${Math.round(probe.blackFrac * 100)}%`;
+      } catch (error) { /* diagnostic only */ }
+    };
+    (view as any).on("postRender", handler);
+  };
   beginStage = () => {
     stop(); stageStarted = true; startedAt = performance.now();
     document.getElementById("stage-caption")?.classList.add("playing");
+    if (probeTimer === undefined) { sampleProbe(); probeTimer = setInterval(sampleProbe, 800); }
     const tick = () => {
       const frame = stageFrame(recipe, (performance.now() - startedAt) / 1000);
       Object.assign(stageState, { playing: frame.playing, shotIndex: frame.shotIndex, progress: frame.progress });
@@ -210,7 +262,7 @@ async function main() {
       view.forceUpdate();
     } catch (error) { status(`キャプチャ失敗: ${error}`); }
   });
-  window.addEventListener("pagehide", () => { stop(); if (stage) { stageState.playing = false; stageStarted = false; stageReady = false; } if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
+  window.addEventListener("pagehide", () => { stop(); if (probeTimer !== undefined) clearInterval(probeTimer); probeTimer = undefined; if (stage) { stageState.playing = false; stageStarted = false; stageReady = false; } if (cameraTimer !== undefined) clearInterval(cameraTimer); cameraTimer = undefined; });
   window.addEventListener("pageshow", () => {
     progress = fixedProgress ?? -1;
     if (stage) {
