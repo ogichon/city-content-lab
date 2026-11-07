@@ -235,11 +235,14 @@ async function main() {
     let probeSecs = 0;
     setInterval(() => {
       probeSecs++;
-      // EXP-019 watchdog: idle can take very long on heavy LOD2 tilesets
+      // EXP-019/020 watchdog: idle can take very long on heavy LOD2 tilesets
       // (continuous streaming), which left performances stuck on the static
       // first frame. Start on a bounded wait instead; tiles keep refining
-      // during the show.
-      if (stageReady && !stageStarted && stageReadyAt > 0 && performance.now() - stageReadyAt > 3000) beginStage();
+      // during the show. EXP-020: the EXP-019 condition depended on a
+      // setup-completion timestamp that not every start path sets (probe
+      // showed wait at 26s), so the watchdog now counts this interval's own
+      // ticks — the heartbeat that provably runs.
+      if (!stageStarted && probeSecs >= 5) beginStage();
       const el = document.getElementById("stage-probe");
       if (el) el.textContent = `probe ${probeSecs}s f${probeState.frames} ${stageStarted ? "run" : "wait"} · ${probeState.text}`;
     }, 1000);
