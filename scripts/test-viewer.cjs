@@ -80,3 +80,8 @@ assert.ok(timeline.stageFrame(sample,5).camera.distance > middle.camera.distance
 assert.ok(viewer.includes('stage && stageReady && !stageStarted'));
 assert.ok(viewer.includes('view.setCamera(frame.camera)'));
 console.log('PASS: stage definitions, interpolation, heading wrap, easing, loop and final hold');
+assert.ok(viewer.includes('transmittance: false'), 'stage disables aerial-perspective transmittance');
+assert.ok(viewer.includes('lit: false'), 'stage runs terrain unlit');
+assert.ok(viewer.includes('hazeDensityScale: 0'), 'stage zeroes cloud haze density');
+assert.ok(viewer.includes('stage-probe') && viewer.includes('sampleProbe'), 'stage luminance probe present');
+console.log('PASS: EXP-016 stage grade (unlit ground, no transmittance, no haze) + luminance probe');
