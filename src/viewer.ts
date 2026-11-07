@@ -26,6 +26,7 @@ async function main() {
   const stage = params.has("stage") && !!recipe.performance?.shots.length;
   let stageStarted = false;
   let stageReady = false;
+  let stageReadyAt = 0;
   let beginStage = () => {};
   const stageState = { playing: false, shotIndex: 0, progress: 0 };
   if (stage) {
@@ -228,14 +229,19 @@ async function main() {
       probeState.text = `err ${(error as any)?.name ?? "unknown"}`;
     }
   };
-  const probeHandler = () => { probeState.frames++; if (stageStarted && probeState.frames % 30 === 0) sampleProbe(); };
+  const probeHandler = () => { probeState.frames++; if (probeState.frames % 30 === 0) sampleProbe(); };
   if (stage) {
     try { (view as any).on("postRender", probeHandler); } catch (error) { probeState.text = `on-err ${(error as any)?.name ?? "unknown"}`; }
     let probeSecs = 0;
     setInterval(() => {
       probeSecs++;
+      // EXP-019 watchdog: idle can take very long on heavy LOD2 tilesets
+      // (continuous streaming), which left performances stuck on the static
+      // first frame. Start on a bounded wait instead; tiles keep refining
+      // during the show.
+      if (stageReady && !stageStarted && stageReadyAt > 0 && performance.now() - stageReadyAt > 3000) beginStage();
       const el = document.getElementById("stage-probe");
-      if (el) el.textContent = `probe ${probeSecs}s f${probeState.frames} · ${probeState.text}`;
+      if (el) el.textContent = `probe ${probeSecs}s f${probeState.frames} ${stageStarted ? "run" : "wait"} · ${probeState.text}`;
     }, 1000);
   }
   beginStage = () => {
@@ -293,7 +299,7 @@ async function main() {
   play.disabled = reset.disabled = recipe.mode !== "growth" && recipe.mode !== "lift";
   (document.getElementById("capture") as HTMLButtonElement).disabled = false;
   if (stage) {
-    stageReady = true;
+    stageReady = true; stageReadyAt = performance.now();
     if ((window as any).__idle) beginStage(); else report();
   } else if (recipe.mode === "lift") start(); else report();
 }
