@@ -26,7 +26,6 @@ async function main() {
   const stage = params.has("stage") && !!recipe.performance?.shots.length;
   let stageStarted = false;
   let stageReady = false;
-  let probeArmed = false;
   let beginStage = () => {};
   const stageState = { playing: false, shotIndex: 0, progress: 0 };
   if (stage) {
@@ -38,7 +37,7 @@ async function main() {
     const credits = document.createElement("p"); credits.id = "stage-credits";
     credits.textContent = recipe.mode === "lift" ? "都市データ: PLATEAU / 国土交通省" : "都市データ: PLATEAU / 国土交通省 · 地理院タイル · Re:Earth Terrain";
     document.body.append(credits);
-    const probe = document.createElement("p"); probe.id = "stage-probe"; probe.textContent = "probe …";
+    const probe = document.createElement("p"); probe.id = "stage-probe"; probe.textContent = "probe init";
     document.body.append(probe);
     // Time presets configure the scene at initialization only. Live time drift
     // is unsupported; timeFrom/timeTo remain part of the durable recipe.
@@ -201,17 +200,17 @@ async function main() {
     }, 50);
     report();
   };
-  // EXP-016/017 luminance probe: ONE persistent postRender handler (the same
-  // readback point as capture), throttled by frame count, so stage brightness
-  // is a number, not an impression. Diagnostic only: every failure path is
-  // caught and the error name is surfaced on the probe element itself, so a
-  // single screenshot identifies why sampling failed.
+  // EXP-016/017/018 luminance probe. v3 is diagnostic-first: a plain 1s
+  // interval heartbeat rewrites the element unconditionally, a bare counter
+  // handler tells whether postRender reaches us at all, and the sampler
+  // records either values or the error name. One screenshot after a few
+  // seconds of playback separates every failure mode.
   const probeCanvas = document.createElement("canvas"); probeCanvas.width = 48; probeCanvas.height = 27;
   const probeCtx = probeCanvas.getContext("2d", { willReadFrequently: true });
-  let probeFrames = 0;
+  const probeState = { frames: 0, samples: 0, text: "init" };
   const sampleProbe = () => {
     try {
-      const canvas = container.querySelector("canvas"); if (!canvas || !probeCtx) return;
+      const canvas = container.querySelector("canvas"); if (!canvas || !probeCtx) { probeState.text = "no-canvas"; return; }
       probeCtx.drawImage(canvas as HTMLCanvasElement, 0, 0, 48, 27);
       const data = probeCtx.getImageData(0, 0, 48, 27).data;
       const n = 48 * 27; let sum = 0, black = 0, groundSum = 0;
@@ -222,19 +221,26 @@ async function main() {
       }
       const probe = { mean: +(sum / n).toFixed(3), blackFrac: +(black / n).toFixed(3), groundMean: +(groundSum / (n / 2)).toFixed(3) };
       (stageState as any).probe = probe;
-      const el = document.getElementById("stage-probe");
-      if (el) el.textContent = `shot ${stageState.shotIndex + 1} · mean ${probe.mean} · ground ${probe.groundMean} · black ${Math.round(probe.blackFrac * 100)}%`;
+      probeState.samples++;
+      probeState.text = `shot ${stageState.shotIndex + 1} mean ${probe.mean} ground ${probe.groundMean} black ${Math.round(probe.blackFrac * 100)}%`;
     } catch (error) {
       (stageState as any).probeError = String((error as any)?.name ?? error);
-      const el = document.getElementById("stage-probe");
-      if (el && !el.textContent?.startsWith("probe err")) el.textContent = `probe err: ${(error as any)?.name ?? "unknown"}`;
+      probeState.text = `err ${(error as any)?.name ?? "unknown"}`;
     }
   };
-  const probeHandler = () => { if (stageStarted && ++probeFrames % 30 === 0) sampleProbe(); };
+  const probeHandler = () => { probeState.frames++; if (stageStarted && probeState.frames % 30 === 0) sampleProbe(); };
+  if (stage) {
+    try { (view as any).on("postRender", probeHandler); } catch (error) { probeState.text = `on-err ${(error as any)?.name ?? "unknown"}`; }
+    let probeSecs = 0;
+    setInterval(() => {
+      probeSecs++;
+      const el = document.getElementById("stage-probe");
+      if (el) el.textContent = `probe ${probeSecs}s f${probeState.frames} · ${probeState.text}`;
+    }, 1000);
+  }
   beginStage = () => {
     stop(); stageStarted = true; startedAt = performance.now();
     document.getElementById("stage-caption")?.classList.add("playing");
-    if (!probeArmed) { probeArmed = true; (view as any).on("postRender", probeHandler); }
     const tick = () => {
       const frame = stageFrame(recipe, (performance.now() - startedAt) / 1000);
       Object.assign(stageState, { playing: frame.playing, shotIndex: frame.shotIndex, progress: frame.progress });
