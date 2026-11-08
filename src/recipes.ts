@@ -114,6 +114,7 @@ export interface Recipe {
     timeFrom?: string;
     timeTo?: string;
     loop?: boolean;
+    progressCurve?: "linear" | "tide";
   };
   seed: number;
   codeVersion: string;
@@ -124,6 +125,7 @@ export const CODE_VERSION = "0.1.0";
 // EXP-003: Controlled isolates material at sunset; Best Look explores lighting.
 // Both sets share the Tokyo base camera.
 export const RECIPES: Recipe[] = [
+  { id: "exp021-breath-core", experiment: "EXP-021", title: "BREATHING CITY（試作）/ 街は自分の時間で呼吸する", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "center-out", cameraOverride: { lng: 139.7585, lat: 35.6858, distance: 2100, heading: 320, pitch: -52 }, performance: { loop: true, progressCurve: "tide", shots: [{ camera: { lng: 139.7585, lat: 35.6858, distance: 2100, heading: 320, pitch: -52 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7585, lat: 35.6858, distance: 1300, heading: 285, pitch: -38 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   { id: "exp003-porcelain", experiment: "EXP-003", title: "MATERIAL TOKYO / 陶器", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "porcelain", seed: 1, codeVersion: CODE_VERSION },
   { id: "exp003-gold", experiment: "EXP-003", title: "MATERIAL TOKYO / 黄金", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "gold", performance: { shots: [{ camera: { distance: 360, pitch: -22, heading: 30 }, durationSec: 8, ease: "inout" }, { camera: { distance: 500, pitch: -32, heading: 55 }, durationSec: 8, ease: "inout" }, { camera: { distance: 660, pitch: -45, heading: 78 }, durationSec: 8, ease: "inout" }], loop: true }, seed: 1, codeVersion: CODE_VERSION },
   { id: "exp003-chrome", experiment: "EXP-003", title: "MATERIAL TOKYO / クローム", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "chrome", seed: 1, codeVersion: CODE_VERSION },

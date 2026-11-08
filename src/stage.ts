@@ -26,7 +26,7 @@ export function stageFrame(recipe: Recipe, elapsedSec: number) {
       // extra orbit (+1.2 deg/s) and distance breathing compounded with the
       // shot interpolation and pushed the camera into the lifted slab field,
       // so they are no longer applied during performances.
-      return { camera, shotIndex: i, progress: elapsed / total, playing: !finished };
+      return { camera, shotIndex: i, progress: performance.progressCurve === "tide" ? 0.5 - 0.5 * Math.cos(2 * Math.PI * (elapsed / total)) : elapsed / total, playing: !finished };
     }
     remaining -= shot.durationSec;
     from = to;

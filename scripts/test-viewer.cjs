@@ -54,8 +54,8 @@ const stageCode = stripTypeScriptTypes(read('src/stage.ts')).replace(/^import .*
 const recipeCode = stripTypeScriptTypes(recipes).replaceAll('export ', '');
 const timeline = vm.runInNewContext(recipeCode + '\n' + stageCode + '\n({stageFrame, RECIPES, PLACES});');
 const performances = timeline.RECIPES.filter(r => r.performance);
-assert.equal(performances.length, 3);
-for (const recipe of performances) {
+assert.equal(performances.length, 4);
+for (const recipe of performances.filter(r => r.performance.progressCurve !== 'tide')) {
   assert.equal(recipe.performance.shots.length, 3);
   const total = recipe.performance.shots.reduce((n, shot) => {
     assert.ok(Number.isFinite(shot.durationSec) && shot.durationSec > 0);
@@ -69,6 +69,38 @@ for (const recipe of performances) {
   assert.equal(end.playing, false); assert.equal(end.progress, 1); assert.equal(end.shotIndex, 2);
   assert.equal(JSON.stringify(end), JSON.stringify(timeline.stageFrame(once, total + 100)));
 }
+const tide = performances.find(r => r.id === 'exp021-breath-core');
+assert.ok(tide);
+assert.equal(tide.performance.shots.length, 2);
+const tideTotal = tide.performance.shots.reduce((sum, shot) => sum + shot.durationSec, 0);
+assert.equal(tideTotal, 48);
+assert.equal(timeline.stageFrame(tide, 0).progress, 0);
+assert.equal(timeline.stageFrame(tide, tideTotal / 2).progress, 1);
+assert.ok(Math.abs(timeline.stageFrame(tide, tideTotal).progress) < 1e-12);
+let previous = 0;
+for (let elapsed = 1; elapsed <= tideTotal; elapsed++) {
+  const progress = timeline.stageFrame(tide, elapsed).progress;
+  assert.ok(elapsed <= tideTotal / 2 ? progress >= previous : progress <= previous);
+  previous = progress;
+}
+const tideOnce = {...tide, performance: {...tide.performance, loop: false}};
+const tideEnd = timeline.stageFrame(tideOnce, tideTotal);
+assert.equal(tideEnd.progress, 0);
+assert.equal(tideEnd.playing, false);
+assert.equal(JSON.stringify(tideEnd), JSON.stringify(timeline.stageFrame(tideOnce, tideTotal + 100)));
+const linear = {...tide, performance: {...tide.performance, progressCurve: 'linear'}};
+const defaultLinear = {...tide, performance: {...tide.performance, progressCurve: undefined}};
+for (const elapsed of [0, 12, 24, 36, 48, 49]) {
+  assert.equal(timeline.stageFrame(linear, elapsed).progress, (elapsed % tideTotal) / tideTotal);
+  assert.equal(JSON.stringify(timeline.stageFrame(linear, elapsed)), JSON.stringify(timeline.stageFrame(defaultLinear, elapsed)));
+}
+for (const elapsed of [0, 12, 24, 36, 48]) {
+  const frame = timeline.stageFrame(tide, elapsed);
+  assert.equal(JSON.stringify(frame.camera), JSON.stringify(timeline.stageFrame(linear, elapsed).camera));
+  assert.equal(frame.camera.lng, 139.7585);
+  assert.equal(frame.camera.lat, 35.6858);
+}
+console.log('PASS: tide rise/fall, loop wrap, single-pass hold, linear default and shot lng/lat overrides');
 const base = timeline.PLACES.tokyo.camera;
 const sample = {place:'tokyo', mode:'standard', cameraOverride:{heading:350}, performance:{shots:[{camera:{heading:10,distance:720},durationSec:10}]}};
 const middle = timeline.stageFrame(sample,5);
