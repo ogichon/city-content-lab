@@ -92,7 +92,7 @@ async function main() {
   for (const effect of [
     { clouds: { coverage: 0.45, lightShafts: true, haze: true } },
     { id: "ccl-bloom", selectiveBloom: { strength: 0.85, radius: 0.6, threshold: 0.55, smoothing: 0.2 } },
-  ]) { try { const handle = view.addEffect(effect as any); if ("clouds" in effect) cloudsHandle = handle; if (recipe.mode === "lift" && "clouds" in effect) handle.update({ visible: false } as any); } catch (error) { console.warn("Optional effect unavailable", error); } }
+  ]) { try { const handle = view.addEffect(effect as any); if ("clouds" in effect) cloudsHandle = handle; if ((recipe.mode === "lift" || recipe.performance?.clouds === "off") && "clouds" in effect) handle.update({ visible: false } as any); } catch (error) { console.warn("Optional effect unavailable", error); } }
   if (stage && cloudsHandle && recipe.mode !== "lift") {
     // EXP-016: cloud haze is the second distance-darkening path; zero it for
     // performances (the proto measured haze density as a real factor).

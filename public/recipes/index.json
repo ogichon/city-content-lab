@@ -49,6 +49,53 @@
       "codeVersion": "0.1.0"
     },
     {
+      "id": "exp021-breath-nocloud",
+      "experiment": "EXP-021",
+      "title": "BREATHING CITY（雲なし診断）/ 街は自分の時間で呼吸する",
+      "place": "tokyo",
+      "time": "sunset",
+      "mode": "growth",
+      "growthOrder": "center-out",
+      "cameraOverride": {
+        "lng": 139.7585,
+        "lat": 35.6858,
+        "distance": 2100,
+        "heading": 320,
+        "pitch": -52
+      },
+      "performance": {
+        "loop": true,
+        "progressCurve": "tide",
+        "clouds": "off",
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.7585,
+              "lat": 35.6858,
+              "distance": 2100,
+              "heading": 320,
+              "pitch": -52
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.7585,
+              "lat": 35.6858,
+              "distance": 1300,
+              "heading": 285,
+              "pitch": -38
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
       "id": "exp003-porcelain",
       "experiment": "EXP-003",
       "title": "MATERIAL TOKYO / 陶器",
