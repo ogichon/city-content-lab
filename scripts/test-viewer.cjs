@@ -54,8 +54,8 @@ const stageCode = stripTypeScriptTypes(read('src/stage.ts')).replace(/^import .*
 const recipeCode = stripTypeScriptTypes(recipes).replaceAll('export ', '');
 const timeline = vm.runInNewContext(recipeCode + '\n' + stageCode + '\n({stageFrame, RECIPES, PLACES});');
 const performances = timeline.RECIPES.filter(r => r.performance);
-assert.equal(performances.length, 5);
-for (const recipe of performances.filter(r => r.performance.progressCurve !== 'tide')) {
+assert.equal(performances.length, 6);
+for (const recipe of performances.filter(r => r.performance.progressCurve !== 'tide' && !r.performance.water)) {
   assert.equal(recipe.performance.shots.length, 3);
   const total = recipe.performance.shots.reduce((n, shot) => {
     assert.ok(Number.isFinite(shot.durationSec) && shot.durationSec > 0);
@@ -101,6 +101,50 @@ for (const elapsed of [0, 12, 24, 36, 48]) {
   assert.equal(frame.camera.lat, 35.6858);
 }
 console.log('PASS: tide rise/fall, loop wrap, single-pass hold, linear default and shot lng/lat overrides');
+// EXP-022: the water level curve is a pure function of elapsed/total —
+// smoothstep rise over 0-45%, hold at maxHeight over 45-65%, smoothstep
+// fall over 65-100%. Non-water performances always report level 0.
+const water = performances.find(r => r.id === 'exp022-sink-core');
+assert.ok(water);
+assert.equal(water.performance.water.maxHeight, 12);
+const waterTotal = water.performance.shots.reduce((sum, shot) => sum + shot.durationSec, 0);
+assert.equal(waterTotal, 48);
+assert.equal(timeline.stageFrame(water, 0).waterLevel, 0);
+assert.equal(timeline.stageFrame(water, waterTotal * 0.45).waterLevel, 12);
+assert.equal(timeline.stageFrame(water, waterTotal * 0.5).waterLevel, 12);
+assert.equal(timeline.stageFrame(water, waterTotal * 0.55).waterLevel, 12);
+assert.equal(timeline.stageFrame(water, waterTotal * 0.65).waterLevel, 12);
+assert.equal(timeline.stageFrame(water, waterTotal).waterLevel, 0);
+let prevLevel = 0;
+for (let e = 0; e <= waterTotal * 0.45; e += 1.2) {
+  const level = timeline.stageFrame(water, e).waterLevel;
+  assert.ok(level >= prevLevel - 1e-9 && level <= 12, `rise monotonic at ${e}s`);
+  prevLevel = level;
+}
+prevLevel = 12;
+for (let e = waterTotal * 0.65; e < waterTotal; e += 1.2) {
+  const level = timeline.stageFrame(water, e).waterLevel;
+  assert.ok(level <= prevLevel + 1e-9 && level >= 0, `fall monotonic at ${e}s`);
+  prevLevel = level;
+}
+// Mid-rise and mid-fall are smoothstep midpoints: half the max height.
+assert.ok(Math.abs(timeline.stageFrame(water, waterTotal * 0.225).waterLevel - 6) < 1e-9);
+assert.ok(Math.abs(timeline.stageFrame(water, waterTotal * 0.825).waterLevel - 6) < 1e-9);
+// Loop wrap restarts the curve; a non-loop run finishes dry and stopped.
+assert.equal(timeline.stageFrame(water, waterTotal + waterTotal * 0.55).waterLevel, 12);
+const waterOnce = {...water, performance: {...water.performance, loop: false}};
+assert.equal(timeline.stageFrame(waterOnce, waterTotal + 10).waterLevel, 0);
+assert.equal(timeline.stageFrame(waterOnce, waterTotal + 10).playing, false);
+assert.equal(timeline.stageFrame(tide, 10).waterLevel, 0);
+assert.equal(timeline.stageFrame(water, 12).camera.lng, 139.7860);
+assert.equal(timeline.stageFrame(water, 12).camera.lat, 35.6960);
+console.log('PASS: EXP-022 water level curve (rise/hold/fall, loop wrap, dry finish)');
+assert.ok(viewer.includes('view.addMesh('), 'water plane created via addMesh');
+assert.ok(viewer.includes('heightReference: "ellipsoid"'), 'water plane placed on ellipsoid height');
+assert.ok(viewer.includes('waterPlane.update({ geodetic: { height: WATER_GROUND_DATUM + waterLevel } }'), 'stage tick drives water plane height');
+assert.ok(viewer.includes('height <= waterLevel'), 'submerged split keyed on measured height vs level');
+assert.ok(viewer.includes('0x2e4d4a'), 'submerged treatment colour present');
+console.log('PASS: EXP-022 viewer wiring (water plane + per-frame submerged split)');
 const base = timeline.PLACES.tokyo.camera;
 const sample = {place:'tokyo', mode:'standard', cameraOverride:{heading:350}, performance:{shots:[{camera:{heading:10,distance:720},durationSec:10}]}};
 const middle = timeline.stageFrame(sample,5);
