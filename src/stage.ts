@@ -1,5 +1,17 @@
 import { PLACES, type Recipe, type PlaceDef } from "./recipes";
 
+const smoothstep = (x: number) => { const t = Math.max(0, Math.min(1, x)); return t * t * (3 - 2 * t); };
+
+// EXP-022: the water level is the performance's only moving part besides the
+// camera. Over the total duration it rises 0 -> maxHeight during 0-45%
+// (smoothstep), holds 45-65%, then falls back to 0 during 65-100%.
+// Pure and deterministic: same elapsed time always yields the same level.
+export function waterLevelAt(water: { maxHeight: number }, ratio: number): number {
+  if (ratio < 0.45) return water.maxHeight * smoothstep(ratio / 0.45);
+  if (ratio < 0.65) return water.maxHeight;
+  return water.maxHeight * (1 - smoothstep((ratio - 0.65) / 0.35));
+}
+
 // ?stage=<recipeId> is the sole autoplay convention. Each shot is a travel
 // from the preceding target (initially effectiveCamera) to base + overrides.
 export function stageFrame(recipe: Recipe, elapsedSec: number) {
@@ -26,7 +38,7 @@ export function stageFrame(recipe: Recipe, elapsedSec: number) {
       // extra orbit (+1.2 deg/s) and distance breathing compounded with the
       // shot interpolation and pushed the camera into the lifted slab field,
       // so they are no longer applied during performances.
-      return { camera, shotIndex: i, progress: performance.progressCurve === "tide" ? 0.5 - 0.5 * Math.cos(2 * Math.PI * (elapsed / total)) : elapsed / total, playing: !finished };
+      return { camera, shotIndex: i, progress: performance.progressCurve === "tide" ? 0.5 - 0.5 * Math.cos(2 * Math.PI * (elapsed / total)) : elapsed / total, waterLevel: performance.water ? waterLevelAt(performance.water, elapsed / total) : 0, playing: !finished };
     }
     remaining -= shot.durationSec;
     from = to;

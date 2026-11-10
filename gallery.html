@@ -44,7 +44,7 @@ try {
     const link = document.createElement('a');
     link.href = `viewer.html?stage=${encodeURIComponent(recipe.id)}`;
     link.textContent = '動く作品を開く';
-    if (recipe.id === 'exp021-breath-core') {
+    if (recipe.id === 'exp021-breath-core' || recipe.id === 'exp022-sink-core') {
       const badge = document.createElement('span');
       badge.className = 'status candidate-badge';
       badge.textContent = '試作';

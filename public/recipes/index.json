@@ -3,6 +3,53 @@
   "note": "Mirror of src/recipes.ts. Camera resolves from PLACES[place].camera plus optional cameraOverride; time resolves from TIMES.",
   "recipes": [
     {
+      "id": "exp022-sink-core",
+      "experiment": "EXP-022",
+      "title": "沈む街（試作）/ 水位だけが上がる",
+      "place": "tokyo",
+      "time": "sunset",
+      "mode": "standard",
+      "cameraOverride": {
+        "lng": 139.786,
+        "lat": 35.696,
+        "distance": 1900,
+        "heading": 305,
+        "pitch": -50
+      },
+      "performance": {
+        "loop": true,
+        "water": {
+          "maxHeight": 12
+        },
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.786,
+              "lat": 35.696,
+              "distance": 1900,
+              "heading": 305,
+              "pitch": -50
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.786,
+              "lat": 35.696,
+              "distance": 1200,
+              "heading": 270,
+              "pitch": -40
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
       "id": "exp021-breath-core",
       "experiment": "EXP-021",
       "title": "BREATHING CITY（試作）/ 街は自分の時間で呼吸する",

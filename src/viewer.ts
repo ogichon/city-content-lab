@@ -10,12 +10,20 @@ const mix = (a: number, b: number, t: number) => {
   const ch = (s: number) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 };
+// EXP-022: PLATEAU/terrain heights are ellipsoid metres. The Sumida east-bank
+// ground is ~0-2 m above sea level, i.e. roughly +37 m ellipsoid in this part
+// of Tokyo (the proto flooded Tokyo Station at a 42 m ellipsoid plane), so
+// the water plane height is this datum + the stage's current water level.
+const WATER_GROUND_DATUM = 37;
 
 async function main() {
   // Declare shared state before initialization or event registration (including bfcache).
   let timer: ReturnType<typeof setInterval> | undefined;
   let cameraTimer: ReturnType<typeof setInterval> | undefined;
   let progress = -1;
+  let waterLevel = 0;
+  let waterPlane: any;
+  let waterPlaneLevel = Number.NaN;
   let startedAt = 0;
   let orbitElapsed = 0;
   let lastTick = 0;
@@ -124,6 +132,21 @@ async function main() {
     }
   };
   const style = ({ properties: p }: { properties?: Record<string, unknown> }) => {
+    if (recipe.performance?.water) {
+      // EXP-022: one porcelain material for every building; a building whose
+      // measured height is at or below the current water level reads as
+      // submerged (dark blue-green, unlit). Ground elevation is not a tile
+      // attribute, so the split is keyed on height vs level — the lowland
+      // approximation recorded in EXP-022. Per-frame: waterLevel is updated
+      // by the stage tick and refresh() re-evaluates this callback.
+      const m = MATERIALS.porcelain;
+      const height = p?.["bldg:measuredHeight"];
+      const t = finite(height) ? clamp(height / 240) : 0;
+      if (finite(height) && height <= waterLevel) {
+        return { color: new Color().setHex(0x2e4d4a), emissive: new Color().setHex(0x000000), emissiveIntensity: 0, metalness: 0, roughness: 1, opacity: 1, show: true };
+      }
+      return { color: new Color().setHex(mix(...m.color, t)), emissive: new Color().setHex(mix(...m.emissive, t)), emissiveIntensity: m.emissiveIntensity, metalness: m.metalness, roughness: m.roughness, opacity: m.opacity, show: true };
+    }
     if (recipe.mode === "material" && recipe.material) {
       const m = MATERIALS[recipe.material];
       const height = p?.["bldg:measuredHeight"];
@@ -154,6 +177,19 @@ async function main() {
     layer.on("featureUpdated", applyFeature);
     try { layer.on("featureRemoved", ({ featureSetId }: any) => { evaluators.delete(featureSetId); }); }
     catch (error) { console.warn("featureRemoved unavailable", error); }
+  }
+  if (stage && recipe.performance?.water) {
+    // EXP-022: ONE translucent water plane centred on the recipe target; its
+    // height is driven per frame by the stage tick (addMesh shape proven in
+    // the sibling UNDERWATER prototype).
+    try {
+      waterPlane = view.addMesh({
+        geodetic: { lng: camera.lng, lat: camera.lat, height: WATER_GROUND_DATUM, heightReference: "ellipsoid" },
+        rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+        plane: { width: 9000, height: 9000, color: new Color().setHex(0x14424f), transparent: true, opacity: 0.55, castShadow: false, receiveShadow: false },
+      } as any);
+      waterPlaneLevel = 0;
+    } catch (error) { console.warn("water plane unavailable", error); }
   }
   if (fixedProgress !== undefined) { progress = fixedProgress; refresh(); }
   try {
@@ -255,6 +291,18 @@ async function main() {
       Object.assign(stageState, { playing: frame.playing, shotIndex: frame.shotIndex, progress: frame.progress });
       view.setCamera(frame.camera);
       if (recipe.mode === "growth") { progress = frame.progress; refresh(); }
+      if (recipe.performance?.water) {
+        // EXP-022: same per-frame pattern as growth — publish the level,
+        // move the plane, and re-evaluate feature styles against it.
+        waterLevel = frame.waterLevel;
+        (stageState as any).waterLevel = frame.waterLevel;
+        if (waterPlane && Math.abs(waterLevel - waterPlaneLevel) > 0.001) {
+          waterPlaneLevel = waterLevel;
+          try { waterPlane.update({ geodetic: { height: WATER_GROUND_DATUM + waterLevel } } as any); }
+          catch (error) { console.warn("water plane update unavailable", error); }
+        }
+        refresh();
+      }
       if (!frame.playing) stop();
     };
     timer = setInterval(tick, 50); tick();
@@ -288,7 +336,13 @@ async function main() {
       stop(); stageStarted = false; stageReady = true;
       Object.assign(stageState, { playing: false, shotIndex: 0, progress: 0 });
       document.getElementById("stage-caption")?.classList.remove("playing");
-      view.setCamera(camera); progress = -1; refresh();
+      view.setCamera(camera); progress = -1; waterLevel = 0;
+      if (waterPlane) {
+        waterPlaneLevel = 0;
+        try { waterPlane.update({ geodetic: { height: WATER_GROUND_DATUM } } as any); }
+        catch (error) { console.warn("water plane reset unavailable", error); }
+      }
+      refresh();
       if ((window as any).__idle) beginStage();
       return;
     }

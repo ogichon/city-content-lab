@@ -115,6 +115,7 @@ export interface Recipe {
     timeTo?: string;
     loop?: boolean;
     progressCurve?: "linear" | "tide"; clouds?: "off";
+    water?: { maxHeight: number };
   };
   seed: number;
   codeVersion: string;
@@ -125,6 +126,9 @@ export const CODE_VERSION = "0.1.0";
 // EXP-003: Controlled isolates material at sunset; Best Look explores lighting.
 // Both sets share the Tokyo base camera.
 export const RECIPES: Recipe[] = [
+  // EXP-022: buildings always visible in the standard porcelain treatment;
+  // the only rule is the rising water level (see performance.water + stage.ts).
+  { id: "exp022-sink-core", experiment: "EXP-022", title: "沈む街（試作）/ 水位だけが上がる", place: "tokyo", time: "sunset", mode: "standard", cameraOverride: { lng: 139.7860, lat: 35.6960, distance: 1900, heading: 305, pitch: -50 }, performance: { loop: true, water: { maxHeight: 12 }, shots: [{ camera: { lng: 139.7860, lat: 35.6960, distance: 1900, heading: 305, pitch: -50 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7860, lat: 35.6960, distance: 1200, heading: 270, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   { id: "exp021-breath-core", experiment: "EXP-021", title: "BREATHING CITY（試作）/ 街は自分の時間で呼吸する", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "center-out", cameraOverride: { lng: 139.7585, lat: 35.6858, distance: 2100, heading: 320, pitch: -52 }, performance: { loop: true, progressCurve: "tide", shots: [{ camera: { lng: 139.7585, lat: 35.6858, distance: 2100, heading: 320, pitch: -52 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7585, lat: 35.6858, distance: 1300, heading: 285, pitch: -38 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   { id: "exp021-breath-nocloud", experiment: "EXP-021", title: "BREATHING CITY（雲なし診断）/ 街は自分の時間で呼吸する", place: "tokyo", time: "sunset", mode: "growth", growthOrder: "center-out", cameraOverride: { lng: 139.7585, lat: 35.6858, distance: 2100, heading: 320, pitch: -52 }, performance: { loop: true, progressCurve: "tide", clouds: "off", shots: [{ camera: { lng: 139.7585, lat: 35.6858, distance: 2100, heading: 320, pitch: -52 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7585, lat: 35.6858, distance: 1300, heading: 285, pitch: -38 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   { id: "exp003-porcelain", experiment: "EXP-003", title: "MATERIAL TOKYO / 陶器", place: "tokyo", time: "sunset", mode: "material", group: "controlled", material: "porcelain", seed: 1, codeVersion: CODE_VERSION },
