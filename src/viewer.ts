@@ -280,7 +280,7 @@ async function main() {
       // ticks — the heartbeat that provably runs.
       if (!stageStarted && probeSecs >= 5) beginStage();
       const el = document.getElementById("stage-probe");
-      if (el) el.textContent = `probe ${probeSecs}s f${probeState.frames} ${stageStarted ? "run" : "wait"} · ${probeState.text}`;
+      if (el) el.textContent = `probe ${probeSecs}s f${probeState.frames} ${stageStarted ? "run" : "wait"} · ${probeState.text}${(stageState as any).waterLevel !== undefined ? ` · w${((stageState as any).waterLevel as number).toFixed(1)}` : ""}`;
     }, 1000);
   }
   beginStage = () => {

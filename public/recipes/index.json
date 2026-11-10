@@ -10,11 +10,11 @@
       "time": "sunset",
       "mode": "standard",
       "cameraOverride": {
-        "lng": 139.786,
-        "lat": 35.696,
-        "distance": 1900,
-        "heading": 305,
-        "pitch": -50
+        "lng": 139.778,
+        "lat": 35.668,
+        "distance": 1600,
+        "heading": 320,
+        "pitch": -48
       },
       "performance": {
         "loop": true,
@@ -24,21 +24,21 @@
         "shots": [
           {
             "camera": {
-              "lng": 139.786,
-              "lat": 35.696,
-              "distance": 1900,
-              "heading": 305,
-              "pitch": -50
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
             },
             "durationSec": 24,
             "ease": "inout"
           },
           {
             "camera": {
-              "lng": 139.786,
-              "lat": 35.696,
-              "distance": 1200,
-              "heading": 270,
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1050,
+              "heading": 298,
               "pitch": -40
             },
             "durationSec": 24,
