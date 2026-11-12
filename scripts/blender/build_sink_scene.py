@@ -19,6 +19,16 @@ Usage:
       [--exposure F] [--width PX] [--height-px PX]
 Levels used for the key stills: w0 = -0.05 (dry, plane under the photo),
 w6 = 8.5 (ground 2.5 + 6), w12 = 14.5 (ground 2.5 + 12).
+
+Motion test (--anim; EXP-022 core moment, 12 s at 24 fps):
+  blender -b -noaudio -P build_sink_scene.py -- --anim \
+      --out FRAMES_DIR [--frames 288] [--frame-start N] [--frame-end N] \
+      [--rise 12] [--rise-end 240] [--push 0.15] [--device CPU|GPU]
+  WATER_LEVEL is keyframed 2.5 (dry datum) -> 2.5+rise across frames
+  1..rise-end with exact-smoothstep Bezier handles, then held to the last
+  frame. The water plane's Z is DRIVEN by the same Value node, so the
+  shader split and the plane stay locked. Keyframes are absolute, so
+  --frame-start resumes a killed render losslessly (expo pattern).
 """
 import bpy, os, sys
 from mathutils import Vector
@@ -215,6 +225,84 @@ scene.cycles.samples = SAMPLES
 scene.cycles.use_denoising = True
 scene.render.resolution_x = int(argval("--width", "1920"))
 scene.render.resolution_y = int(argval("--height-px", "1080"))
-scene.render.filepath = OUT
-bpy.ops.render.render(write_still=True)
-print(f"CCL SINK: rendered {OUT}", flush=True)
+
+if "--anim" in argv:
+    # --- EXP-022 motion test: only the water level moves (+ slow push-in).
+    if argval("--device", "CPU") == "GPU":
+        prefs = bpy.context.preferences.addons['cycles'].preferences
+        prefs.compute_device_type = 'METAL'
+        for dev in prefs.devices:
+            dev.use = True
+        scene.cycles.device = 'GPU'
+        print("CCL SINK ANIM: cycles device = GPU (METAL)", flush=True)
+    frames = int(argval("--frames", "288"))
+    dry_z = 2.5  # scene ground datum (see header)
+    top_z = dry_z + float(argval("--rise", "12"))
+    rise_end = int(argval("--rise-end", "240"))
+    scene.render.fps = 24
+    scene.render.fps_base = 1.0
+    scene.frame_start = int(argval("--frame-start", "1"))
+    scene.frame_end = int(argval("--frame-end", str(frames)))
+
+    # Keyframe the single WATER_LEVEL Value node: dry -> top across
+    # 1..rise-end, held to the end. Cubic Bezier handles at the thirds
+    # with endpoint values make the segment EXACTLY 3t^2 - 2t^3.
+    wl_sock = porcelain.node_tree.nodes["WATER_LEVEL"].outputs[0]
+    wl_sock.default_value = dry_z
+    wl_sock.keyframe_insert("default_value", frame=1)
+    wl_sock.default_value = top_z
+    wl_sock.keyframe_insert("default_value", frame=rise_end)
+    wl_sock.keyframe_insert("default_value", frame=frames)
+    nt_anim = porcelain.node_tree.animation_data
+    fc = next(c for c in nt_anim.action.fcurves if "WATER_LEVEL" in c.data_path)
+    kps = sorted(fc.keyframe_points, key=lambda k: k.co[0])
+    span = rise_end - 1
+    kps[0].handle_right_type = 'FREE'
+    kps[0].handle_right = (1 + span / 3.0, dry_z)
+    kps[1].handle_left_type = 'FREE'
+    kps[1].handle_left = (rise_end - span / 3.0, top_z)
+    fc.update()
+    checks = {f: round(fc.evaluate(f), 3) for f in (1, 60.25, 120.5, 180.75, rise_end, frames)}
+    print(f"CCL SINK ANIM: WATER_LEVEL curve {checks} (expect 120.5 -> {(dry_z + top_z) / 2})", flush=True)
+
+    # Lock the water plane to the same node with a driver: the plane can
+    # never disagree with the shader split.
+    drv = w.driver_add("location", 2).driver
+    drv.type = 'SCRIPTED'
+    var = drv.variables.new(); var.name = "wl"; var.type = 'SINGLE_PROP'
+    var.targets[0].id_type = 'MATERIAL'
+    var.targets[0].id = porcelain
+    var.targets[0].data_path = 'node_tree.nodes["WATER_LEVEL"].outputs[0].default_value'
+    drv.expression = "wl"
+
+    # Slow push-in: camera travels --push of the way toward the fixed
+    # target across the whole shot, re-aimed at the target throughout.
+    push = float(argval("--push", "0.15"))
+    start_loc = cam.location.copy()
+    end_loc = start_loc + (tgt - start_loc) * push
+    cam.keyframe_insert("location", frame=1)
+    cam.keyframe_insert("rotation_euler", frame=1)
+    cam.location = end_loc
+    cam.rotation_euler = (tgt - end_loc).to_track_quat('-Z', 'Y').to_euler()
+    cam.keyframe_insert("location", frame=frames)
+    cam.keyframe_insert("rotation_euler", frame=frames)
+    print(f"CCL SINK ANIM: push-in {tuple(round(v) for v in start_loc)} -> "
+          f"{tuple(round(v) for v in end_loc)} over {frames} frames", flush=True)
+
+    # Verify the lock end-to-end (node value vs evaluated plane Z).
+    dg = bpy.context.evaluated_depsgraph_get()
+    for f in (1, 120, rise_end):
+        scene.frame_set(f)
+        dg = bpy.context.evaluated_depsgraph_get()
+        print(f"CCL SINK ANIM: f{f}: WATER_LEVEL={wl_sock.default_value:.2f} "
+              f"plane_z={w.evaluated_get(dg).location.z:.2f}", flush=True)
+
+    os.makedirs(OUT, exist_ok=True)
+    scene.render.filepath = os.path.join(OUT, "f_")
+    scene.render.image_settings.file_format = 'PNG'
+    bpy.ops.render.render(animation=True)
+    print(f"CCL SINK ANIM: rendered frames {scene.frame_start}..{scene.frame_end} -> {OUT}", flush=True)
+else:
+    scene.render.filepath = OUT
+    bpy.ops.render.render(write_still=True)
+    print(f"CCL SINK: rendered {OUT}", flush=True)
