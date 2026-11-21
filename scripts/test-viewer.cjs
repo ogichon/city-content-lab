@@ -54,7 +54,7 @@ const stageCode = stripTypeScriptTypes(read('src/stage.ts')).replace(/^import .*
 const recipeCode = stripTypeScriptTypes(recipes).replaceAll('export ', '');
 const timeline = vm.runInNewContext(recipeCode + '\n' + stageCode + '\n({stageFrame, RECIPES, PLACES});');
 const performances = timeline.RECIPES.filter(r => r.performance);
-assert.equal(performances.length, 6);
+assert.equal(performances.length, 8);
 for (const recipe of performances.filter(r => r.performance.progressCurve !== 'tide' && !r.performance.water)) {
   assert.equal(recipe.performance.shots.length, 3);
   const total = recipe.performance.shots.reduce((n, shot) => {
