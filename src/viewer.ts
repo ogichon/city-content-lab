@@ -99,7 +99,14 @@ async function main() {
     try { (scene as any).aerialPerspective?.update({ aerialPerspective: { transmittance: false } } as any); }
     catch (error) { console.warn("aerialPerspective unavailable", error); }
   }
-  view.addLight({ ambient: { intensity: time.ambient, color: new Color().setHex(0x93a7cc) } } as any);
+  // EXP-023 final diagnostic opt-in (round-3 fix 3): a stage performance
+  // may replace the preset's ambient intensity with performance.ambientLift
+  // to raise the ambient floor (the sunset/golden floor of 0.15 is what the
+  // unlit porcelain reads as). Stage mode only, and only when the recipe
+  // sets it — every existing recipe keeps the preset value, and the static
+  // viewer is unchanged.
+  const ambientIntensity = stage && recipe.performance?.ambientLift !== undefined ? recipe.performance.ambientLift : time.ambient;
+  view.addLight({ ambient: { intensity: ambientIntensity, color: new Color().setHex(0x93a7cc) } } as any);
   // Stage mode reads darker than the tuned static framings (wide shots at
   // sunset/night fall off a cliff), so performances get a modest exposure
   // lift. Only ever raises exposure; the static viewer is unchanged.

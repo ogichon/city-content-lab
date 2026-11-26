@@ -241,6 +241,57 @@
       "codeVersion": "0.1.0"
     },
     {
+      "id": "exp023-diag-fixed",
+      "experiment": "EXP-023",
+      "title": "沈む街（診断 統合修正）/ 水位だけが上がる",
+      "place": "tokyo",
+      "time": "golden",
+      "mode": "standard",
+      "cameraOverride": {
+        "lng": 139.778,
+        "lat": 35.668,
+        "distance": 1600,
+        "heading": 320,
+        "pitch": -48
+      },
+      "performance": {
+        "loop": true,
+        "water": {
+          "maxHeight": 12
+        },
+        "clouds": "off",
+        "sunFix": true,
+        "waterHide": true,
+        "ambientLift": 0.35,
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1050,
+              "heading": 298,
+              "pitch": -40
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
       "id": "exp023-diag-day",
       "experiment": "EXP-023",
       "title": "沈む街（診断 day）/ 水位だけが上がる",
