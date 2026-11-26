@@ -66,8 +66,8 @@ try {
     });
   }
   for (const [name, list] of [['JSON', manifest.recipes], ['TypeScript', recipes]]) {
-    check(`${name}: 29 recipes and six Best Look lighting presets`, () => {
-      assert.equal(list.length, 29);
+    check(`${name}: 31 recipes and six Best Look lighting presets`, () => {
+      assert.equal(list.length, 31);
       const best = list.filter(r => r.experiment === 'EXP-003' && r.group === 'best');
       assert.equal(best.length, 6);
       assert.deepEqual(best.map(r => r.material).sort(), [...materials].sort());

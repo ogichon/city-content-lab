@@ -78,7 +78,19 @@ async function main() {
   status("WASM初期化中…"); await view.init();
   (window as any).__view = view;
   const scene = plugin.addDefaultPhotorealScene();
-  scene.sun.update({ sun: { castShadow: true } } as any);
+  if (recipe.performance?.sunFix) {
+    // EXP-023 round 3, fix 1 (diagnostic opt-in): with applyColor left at
+    // its default false, the sun's colour is solar irradiance times the
+    // atmospheric transmittance, which is ~0 at the sunset altitude and
+    // ~0.02 at golden (+2.6°) — the porcelain ends up lit by the 0.15
+    // ambient alone and reads as a dark silhouette (see EXP-023 round 3).
+    // applyColor: true makes the light use the configured colour directly
+    // (the SDK nulls the transmittance lookup), so direction still comes
+    // from the atmosphere date while strength is restored explicitly.
+    scene.sun.update({ sun: { castShadow: true, applyColor: true, color: new Color().setHex(0xffb36b), intensity: 3 } } as any);
+  } else {
+    scene.sun.update({ sun: { castShadow: true } } as any);
+  }
   if (stage) {
     // EXP-016 structural grade: the default photoreal scene extinguishes
     // light with distance (aerial-perspective transmittance), which is the
@@ -143,6 +155,14 @@ async function main() {
       const height = p?.["bldg:measuredHeight"];
       const t = finite(height) ? clamp(height / 240) : 0;
       if (finite(height) && height <= waterLevel) {
+        if (recipe.performance?.waterHide) {
+          // EXP-023 round 3, fix 2 (diagnostic opt-in): hide the building
+          // instead of flipping the WHOLE building to dark teal — the flip
+          // also darkens the part still above water, and the round-3
+          // coverage analysis showed that is what collapses the frame
+          // mean at max water. The water plane covers the submerged part.
+          return { color: new Color().setHex(0x2e4d4a), emissive: new Color().setHex(0x000000), emissiveIntensity: 0, metalness: 0, roughness: 1, opacity: 1, show: false };
+        }
         return { color: new Color().setHex(0x2e4d4a), emissive: new Color().setHex(0x000000), emissiveIntensity: 0, metalness: 0, roughness: 1, opacity: 1, show: true };
       }
       return { color: new Color().setHex(mix(...m.color, t)), emissive: new Color().setHex(mix(...m.emissive, t)), emissiveIntensity: m.emissiveIntensity, metalness: m.metalness, roughness: m.roughness, opacity: m.opacity, show: true };

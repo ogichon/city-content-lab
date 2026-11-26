@@ -97,6 +97,54 @@
       "codeVersion": "0.1.0"
     },
     {
+      "id": "exp023-diag-sunfix",
+      "experiment": "EXP-023",
+      "title": "沈む街（診断 sunfix）/ 水位だけが上がる",
+      "place": "tokyo",
+      "time": "golden",
+      "mode": "standard",
+      "cameraOverride": {
+        "lng": 139.778,
+        "lat": 35.668,
+        "distance": 1600,
+        "heading": 320,
+        "pitch": -48
+      },
+      "performance": {
+        "loop": true,
+        "water": {
+          "maxHeight": 12
+        },
+        "sunFix": true,
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1050,
+              "heading": 298,
+              "pitch": -40
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
       "id": "exp023-diag-nocloud",
       "experiment": "EXP-023",
       "title": "沈む街（診断 雲なし）/ 水位だけが上がる",
@@ -116,6 +164,54 @@
           "maxHeight": 12
         },
         "clouds": "off",
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1050,
+              "heading": 298,
+              "pitch": -40
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
+      "id": "exp023-diag-hide",
+      "experiment": "EXP-023",
+      "title": "沈む街（診断 水没非表示）/ 水位だけが上がる",
+      "place": "tokyo",
+      "time": "sunset",
+      "mode": "standard",
+      "cameraOverride": {
+        "lng": 139.778,
+        "lat": 35.668,
+        "distance": 1600,
+        "heading": 320,
+        "pitch": -48
+      },
+      "performance": {
+        "loop": true,
+        "water": {
+          "maxHeight": 12
+        },
+        "waterHide": true,
         "shots": [
           {
             "camera": {
