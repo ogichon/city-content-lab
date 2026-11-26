@@ -145,6 +145,109 @@
       "codeVersion": "0.1.0"
     },
     {
+      "id": "exp023-diag-day",
+      "experiment": "EXP-023",
+      "title": "沈む街（診断 day）/ 水位だけが上がる",
+      "place": "tokyo",
+      "time": "day",
+      "mode": "standard",
+      "cameraOverride": {
+        "lng": 139.778,
+        "lat": 35.668,
+        "distance": 1600,
+        "heading": 320,
+        "pitch": -48
+      },
+      "performance": {
+        "loop": true,
+        "water": {
+          "maxHeight": 12
+        },
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1050,
+              "heading": 298,
+              "pitch": -40
+            },
+            "durationSec": 24,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
+      "id": "exp023-diag-material",
+      "experiment": "EXP-023",
+      "title": "沈む街（診断 material）/ マテリアル経路・同画角",
+      "place": "tokyo",
+      "time": "golden",
+      "mode": "material",
+      "material": "porcelain",
+      "cameraOverride": {
+        "lng": 139.778,
+        "lat": 35.668,
+        "distance": 1600,
+        "heading": 320,
+        "pitch": -48
+      },
+      "performance": {
+        "loop": true,
+        "shots": [
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1050,
+              "heading": 298,
+              "pitch": -40
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          },
+          {
+            "camera": {
+              "lng": 139.778,
+              "lat": 35.668,
+              "distance": 1600,
+              "heading": 320,
+              "pitch": -48
+            },
+            "durationSec": 8,
+            "ease": "inout"
+          }
+        ]
+      },
+      "seed": 42,
+      "codeVersion": "0.1.0"
+    },
+    {
       "id": "exp021-breath-core",
       "experiment": "EXP-021",
       "title": "BREATHING CITY（試作）/ 街は自分の時間で呼吸する",
