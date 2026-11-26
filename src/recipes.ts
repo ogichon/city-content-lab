@@ -123,6 +123,11 @@ export interface Recipe {
     // never set these, so their behaviour is unchanged.
     sunFix?: boolean;
     waterHide?: boolean;
+    // EXP-023 final diagnostic opt-in (viewer.ts): in stage mode only,
+    // replaces the time preset's ambient intensity with this value
+    // (round-3 fix 3 — raise the ambient floor). Existing recipes never
+    // set it, so their behaviour is unchanged.
+    ambientLift?: number;
   };
   seed: number;
   codeVersion: string;
@@ -154,6 +159,17 @@ export const RECIPES: Recipe[] = [
   // submerged treatment the round-3 coverage analysis blamed for the
   // max-water frame-mean collapse.
   { id: "exp023-diag-hide", experiment: "EXP-023", title: "沈む街（診断 水没非表示）/ 水位だけが上がる", place: "tokyo", time: "sunset", mode: "standard", cameraOverride: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, performance: { loop: true, water: { maxHeight: 12 }, waterHide: true, shots: [{ camera: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7780, lat: 35.6680, distance: 1050, heading: 298, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
+  // EXP-023 FINAL diagnostic (deliberate bundle — the single-variable
+  // rounds are done, see CHECK 3): exp022-sink-core with every confirmed
+  // or indicated fix applied at once, so both fixes are judged under
+  // conditions where porcelain and water are actually visible:
+  // time golden (sun +2.6°) instead of post-sunset, clouds off (H2:
+  // black frames), sunFix (round-3 fix 1: sun strength decoupled from
+  // atmospheric transmittance), waterHide (round-3 fix 2: submerged
+  // buildings hidden, not flipped dark), ambientLift 0.35 (round-3
+  // fix 3: stage ambient floor raised from golden's 0.15). Place,
+  // cameras, water curve and shots are identical to the control.
+  { id: "exp023-diag-fixed", experiment: "EXP-023", title: "沈む街（診断 統合修正）/ 水位だけが上がる", place: "tokyo", time: "golden", mode: "standard", cameraOverride: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, performance: { loop: true, water: { maxHeight: 12 }, clouds: "off", sunFix: true, waterHide: true, ambientLift: 0.35, shots: [{ camera: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7780, lat: 35.6680, distance: 1050, heading: 298, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   // EXP-023 second-round discriminators (after the 2026-11-26 CHECK:
   // golden restored only a partial warm face, so the silhouette's main
   // cause is still open). day changes only the time preset to midday —
