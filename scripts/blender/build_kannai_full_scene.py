@@ -13,7 +13,8 @@ changes vs the 72-frame motion test, per the EXP-025 design lock:
   cream/white): any bucket with strength > 1.7 is capped to 1.6 and its
   colour deepened toward amber (g -0.06, b -0.07). Buckets <= 1.7 keep
   the EXP-025 md5 palette verbatim.
-- Camera, three acts (cuts at act boundaries; Act 2 -> 3 continuous):
+- Camera, three acts (cuts at act boundaries; Act 2 -> 3 continuous,
+  plus one hard cut inside Act 3 at f1621 — see the Act 3 note below):
   Act 1 (f1-360, 0-15 s): street level on the open plaza south of the
     node, slow 12 m push north toward the node heart — the wave is born
     here. (Two earlier candidates failed on sight: (395,-1055) is inside
@@ -29,10 +30,20 @@ changes vs the 72-frame motion test, per the EXP-025 design lock:
     NW at walking pace to the still's own composition (326,-733) while
     looking SE down the corridor — the front sweeps far->near and
     overtakes the retreating camera around f960-1000.
-  Act 3 (f1441-1800, 60-75 s): the only rise — continuous from Act 2's
-    end pose, up to ~39 m, target easing from the corridor to the
-    district's northern cluster (465,-980); lens widens 42 -> 36 during
-    the rise. Closes on the fully lit district (the count 845).
+  Act 3 (f1441-1800, 60-75 s): the only rise, then a hard cut to the
+    closing hold (director decision, EXP-025 追補5, option ii). The rise
+    keeps the locked path geometry (Act 2 end pose -> (312,-722,13) ->
+    (301,-712,25) -> summit (294,-702,37), target easing to the northern
+    cluster (465,-980), lens 42 -> 36) but is re-timed to COMPLETE at
+    the summit at f1620 (180 fr instead of 360), so the upward gesture
+    finishes before the cut. At f1621 a HARD CUT lands on the proven
+    Kannai context vantage (258,-1002,39) -> (488,-1118,5) — the only
+    framing where the fully lit district reads as a whole (the locked
+    continuous-rise framing occludes most lights behind mid-field
+    towers; 追補4 CHECK) — held near-static (3 m slow push-in) to
+    f1800. The count 845 lands on this hold (typography is a post step).
+    The district is fully lit from f1320, so both sides of the cut are
+    fully lit; the cut changes only the vantage.
 
 Usage (sequence, Mac GPU):
   blender -b -noaudio -P build_kannai_full_scene.py -- --device GPU \
@@ -77,6 +88,12 @@ A1_END = vec3("--a1-end", "529 -1190 4.2")
 A1_TARGET = vec3("--a1-target", "498 -1092 5")
 A3_END = vec3("--a3-end", "294 -702 37")
 A3_TARGET = vec3("--a3-target", "465 -980 0")
+# Act 3 closing hold (追補5): proven Kannai context vantage + 3 m push-in end.
+CTX_START = vec3("--ctx-start", "258 -1002 39")
+CTX_TARGET = vec3("--ctx-target", "488 -1118 5")
+CTX_END = vec3("--ctx-end", "260.7 -1003.3 38.6")
+RISE_LAST = 1620   # rise completes at the locked summit on this frame
+CUT_FRAME = 1621   # first frame of the context hold (hard cut)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.wm.obj_import(filepath=OBJ, up_axis='Z', forward_axis='Y')
@@ -252,11 +269,16 @@ CAM_KEYS = [
     # Act 2 — Bashamichi: start further SE, retreat NW to the still composition
     (361,  A2_START, A2_START + CORRIDOR_DIR * 170 + Vector((0, 0, 2.3)), 42.0),
     (1440, A2_END,   A2_END + CORRIDOR_DIR * 170 + Vector((0, 0, 2.3)), 42.0),
-    # Act 3 — the only rise: continuous from Act 2's end pose, to ~39 m
+    # Act 3a — the only rise: continuous from Act 2's end pose along the
+    # locked path, re-timed to reach the summit (A3_END) at RISE_LAST.
     (1441, A2_END,   A2_END + CORRIDOR_DIR * 170 + Vector((0, 0, 2.3)), 42.0),
-    (1560, Vector((312.0, -722.0, 13.0)), Vector((472.0, -895.0, 3.0)), 40.0),
-    (1680, Vector((301.0, -712.0, 25.0)), Vector((468.0, -955.0, 0.0)), 37.0),
-    (1800, A3_END,   A3_TARGET, 36.0),
+    (1500, Vector((312.0, -722.0, 13.0)), Vector((472.0, -895.0, 3.0)), 40.0),
+    (1560, Vector((301.0, -712.0, 25.0)), Vector((468.0, -955.0, 0.0)), 37.0),
+    (RISE_LAST, A3_END, A3_TARGET, 36.0),
+    # Act 3b — HARD CUT at CUT_FRAME to the proven context vantage;
+    # near-static hold (3 m slow push-in) to the end.
+    (CUT_FRAME, CTX_START, CTX_TARGET, 36.0),
+    (1800, CTX_END,   CTX_TARGET, 36.0),
 ]
 cam_data = bpy.data.cameras.new("Cam")
 cam = bpy.data.objects.new("Cam", cam_data)
@@ -280,7 +302,9 @@ if cam_data.animation_data and cam_data.animation_data.action:
             kp.interpolation = 'LINEAR'
 print(f"CCL FULL: camera acts — A1 f1-360 node street push {tuple(A1_START)}->{tuple(A1_END)} "
       f"target {tuple(A1_TARGET)}; A2 f361-1440 Bashamichi retreat (352,-749)->(326,-733); "
-      f"A3 f1441-1800 rise to {tuple(A3_END)} target {tuple(A3_TARGET)}, lens 42->36", flush=True)
+      f"A3a f1441-{RISE_LAST} rise to summit {tuple(A3_END)} target {tuple(A3_TARGET)}, lens 42->36; "
+      f"A3b HARD CUT f{CUT_FRAME} to context vantage {tuple(CTX_START)}->{tuple(CTX_TARGET)}, "
+      f"hold to f1800 (3 m push-in to {tuple(CTX_END)})", flush=True)
 
 scene = bpy.context.scene
 scene.render.engine = 'CYCLES'
@@ -312,7 +336,15 @@ with open(os.path.join(FRAMES_DIR, "ignition-order.json"), "w") as fh:
                "palette_cap": {"above": CAP_ABOVE, "strength": CAP_STRENGTH,
                                "deepen_g": -0.06, "deepen_b": -0.07, "capped_openings": n_capped},
                "acts": {"act1_frames": [1, 360], "act2_frames": [361, 1440],
-                        "act3_frames": [1441, 1800]},
+                        "act3_frames": [1441, 1800],
+                        "act3_rise_frames": [1441, RISE_LAST],
+                        "act3_cut_frame": CUT_FRAME,
+                        "act3_hold_frames": [CUT_FRAME, 1800],
+                        "act3_rise_summit": list(A3_END),
+                        "act3_context_vantage": {"loc": list(CTX_START),
+                                                 "target": list(CTX_TARGET),
+                                                 "push_in_end": list(CTX_END),
+                                                 "lens": 36.0}},
                "openings": sidecar}, fh, indent=1)
 
 if FRAME_ONLY:
