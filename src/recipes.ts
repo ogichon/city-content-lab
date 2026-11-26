@@ -119,6 +119,10 @@ export interface Recipe {
     loop?: boolean;
     progressCurve?: "linear" | "tide"; clouds?: "off";
     water?: { maxHeight: number };
+    // EXP-023 round-3 diagnostic opt-ins (viewer.ts). Existing recipes
+    // never set these, so their behaviour is unchanged.
+    sunFix?: boolean;
+    waterHide?: boolean;
   };
   seed: number;
   codeVersion: string;
@@ -136,7 +140,20 @@ export const RECIPES: Recipe[] = [
   // golden changes only the sun position (time preset); nocloud changes
   // only performance.clouds. exp022-sink-core stays the unchanged control.
   { id: "exp023-diag-golden", experiment: "EXP-023", title: "沈む街（診断 golden）/ 水位だけが上がる", place: "tokyo", time: "golden", mode: "standard", cameraOverride: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, performance: { loop: true, water: { maxHeight: 12 }, shots: [{ camera: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7780, lat: 35.6680, distance: 1050, heading: 298, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
+  // EXP-023 round 3, fix 1 (diagnostic): exp023-diag-golden plus
+  // performance.sunFix — the viewer decouples the sun from atmospheric
+  // transmittance (applyColor + warm colour + explicit intensity), the
+  // round-3 code diagnosis's top-ranked cause of the silhouettes. The
+  // only variable vs diag-golden is the sun's strength/colour path.
+  { id: "exp023-diag-sunfix", experiment: "EXP-023", title: "沈む街（診断 sunfix）/ 水位だけが上がる", place: "tokyo", time: "golden", mode: "standard", cameraOverride: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, performance: { loop: true, water: { maxHeight: 12 }, sunFix: true, shots: [{ camera: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7780, lat: 35.6680, distance: 1050, heading: 298, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   { id: "exp023-diag-nocloud", experiment: "EXP-023", title: "沈む街（診断 雲なし）/ 水位だけが上がる", place: "tokyo", time: "sunset", mode: "standard", cameraOverride: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, performance: { loop: true, water: { maxHeight: 12 }, clouds: "off", shots: [{ camera: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7780, lat: 35.6680, distance: 1050, heading: 298, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
+  // EXP-023 round 3, fix 2 (diagnostic): exp022-sink-core plus
+  // performance.waterHide — fully-submerged buildings are hidden
+  // (show: false) instead of flipped to dark teal 0x2e4d4a. Time stays
+  // sunset and clouds stay on: the only variable vs the control is the
+  // submerged treatment the round-3 coverage analysis blamed for the
+  // max-water frame-mean collapse.
+  { id: "exp023-diag-hide", experiment: "EXP-023", title: "沈む街（診断 水没非表示）/ 水位だけが上がる", place: "tokyo", time: "sunset", mode: "standard", cameraOverride: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, performance: { loop: true, water: { maxHeight: 12 }, waterHide: true, shots: [{ camera: { lng: 139.7780, lat: 35.6680, distance: 1600, heading: 320, pitch: -48 }, durationSec: 24, ease: "inout" }, { camera: { lng: 139.7780, lat: 35.6680, distance: 1050, heading: 298, pitch: -40 }, durationSec: 24, ease: "inout" }] }, seed: 42, codeVersion: CODE_VERSION },
   // EXP-023 second-round discriminators (after the 2026-11-26 CHECK:
   // golden restored only a partial warm face, so the silhouette's main
   // cause is still open). day changes only the time preset to midday —
